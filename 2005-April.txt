@@ -1,0 +1,1758 @@
+From jol at sheep.berlios.de  Fri Apr  1 00:29:25 2005
+From: jol at sheep.berlios.de (Joël Vennin at BerliOS)
+Date: Fri, 1 Apr 2005 00:29:25 +0200
+Subject: [Eim-svn] r30 - / src src/egxp src/gui src/xmpp src/xmpp-im
+Message-ID: <200503312229.j2VMTPhd016025@sheep.berlios.de>
+
+Author: jol
+Date: 2005-04-01 00:29:22 +0200 (Fri, 01 Apr 2005)
+New Revision: 30
+
+Modified:
+   /
+   ChangeLog
+   TODO
+   src/
+   src/egxp/
+   src/egxp/egxp_message.c
+   src/gui/
+   src/xmpp-im/
+   src/xmpp-im/test.c
+   src/xmpp-im/xmpp_im.c
+   src/xmpp-im/xmpp_im.h
+   src/xmpp-im/xmpp_im_callback.c
+   src/xmpp-im/xmpp_im_callback.h
+   src/xmpp-im/xmpp_im_contact.c
+   src/xmpp-im/xmpp_im_contact.h
+   src/xmpp-im/xmpp_im_opcode.c
+   src/xmpp-im/xmpp_im_opcode.h
+   src/xmpp-im/xmpp_im_roster.c
+   src/xmpp-im/xmpp_im_roster.h
+   src/xmpp-im/xmpp_im_struct.h
+   src/xmpp/
+   src/xmpp/sha1.c
+   src/xmpp/sha1.h
+   src/xmpp/xmpp_jid.h
+   src/xmpp/xmpp_presence.c
+   src/xmpp/xmpp_presence.h
+Log:
+- Fix a dirty bug inside the get_data of the egxp_message
+- Fix a bug in the roster, in fact, all contacts were referenced
+  name instead of their jid.
+- It seems to have no memory leak
+
+
+
+
+Property changes on: 
+___________________________________________________________________
+Name: svn:ignore
+   - configure
+Makefile.in
+config.log
+depcomp
+compile
+config.guess
+config.h
+ltmain.sh
+config.sub
+Makefile
+config.status
+stamp-h1
+config.h.in
+libtool
+autom4te.cache
+missing
+aclocal.m4
+install-sh
+
+   + configure
+Makefile.in
+config.log
+depcomp
+compile
+config.guess
+config.h
+ltmain.sh
+config.sub
+Makefile
+config.status
+stamp-h1
+config.h.in
+libtool
+autom4te.cache
+missing
+aclocal.m4
+install-sh
+eim.kdevelop
+Doxyfile
+html
+eim.kdevelop.pcs
+latex
+eim.kdevses
+eim.tag
+xml
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-03-30 21:42:22 UTC (rev 29)
++++ ChangeLog	2005-03-31 22:29:22 UTC (rev 30)
+@@ -1,3 +1,9 @@
++2005-03/31(jol):
++	- Fix a dirty bug inside the get_data of the egxp_message
++	- Fix a bug in the roster, in fact, all contacts were referenced by their
++	  name instead of their jid.
++	- It seems to have no memory leak
++	
+ 2005-03-30(jol):
+ 	- fix a bug in the xmpp_jid code,
+ 	- the bug hunting progress ...
+
+Modified: TODO
+===================================================================
+--- TODO	2005-03-30 21:42:22 UTC (rev 29)
++++ TODO	2005-03-31 22:29:22 UTC (rev 30)
+@@ -1,9 +1,7 @@
+ HIGH URGENCY
+ - Add a function to display the protocol define by egxp, it will help to debug.
+-- Create the XmppIM structure in order to fill the roster.
+-- Fill the roster !
+ 
+ 
+ LOW URGENCY
+ - Should change the egxp_message to handle integer tag instead of char * tag.
+-- Need some improvement in the egxp_message in order to limit the buffer copy ...
++- Need some improvement in the egxp_message in order to limit buffer copy ...
+
+
+Property changes on: src
+___________________________________________________________________
+Name: svn:ignore
+   - Makefile.in
+Makefile
+
+   + Makefile.in
+Makefile
+stamp-h1
+config.h
+config.h.in
+.libs
+.deps
+eim
+
+
+
+Property changes on: src/egxp
+___________________________________________________________________
+Name: svn:ignore
+   - Makefile.in
+Makefile
+.libs
+.deps
+test
+
+   + Makefile.in
+Makefile
+.libs
+.deps
+test
+.*
+
+
+Modified: src/egxp/egxp_message.c
+===================================================================
+--- src/egxp/egxp_message.c	2005-03-30 21:42:22 UTC (rev 29)
++++ src/egxp/egxp_message.c	2005-03-31 22:29:22 UTC (rev 30)
+@@ -217,7 +217,8 @@
+   
+   char * buf = (char*) malloc ((m->data_size + 1) * sizeof (char));
+   strncpy (buf, m->data, m->data_size);
+-  
++  buf[m->data_size] = '\0';
++
+   return buf;
+ }
+ 
+
+
+Property changes on: src/gui
+___________________________________________________________________
+Name: svn:ignore
+   + .*
+Makefile
+Makefile.in
+
+
+
+Property changes on: src/xmpp
+___________________________________________________________________
+Name: svn:ignore
+   - Makefile.in
+Makefile
+.libs
+.deps
+test
+
+   + Makefile.in
+Makefile
+.libs
+.deps
+test
+.*
+
+
+
+Property changes on: src/xmpp/sha1.c
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp/sha1.h
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+Modified: src/xmpp/xmpp_jid.h
+===================================================================
+--- src/xmpp/xmpp_jid.h	2005-03-30 21:42:22 UTC (rev 29)
++++ src/xmpp/xmpp_jid.h	2005-03-31 22:29:22 UTC (rev 30)
+@@ -61,7 +61,7 @@
+  * @param jid: The jid used to get the bar jid
+  * @return the jid bare, you should free the memory
+  */
+-char * xmpp_jid_get_bare (Xmpp_JID * jid);
++char * xmpp_jid_get_bar (Xmpp_JID * jid);
+ 
+ 
+ /**
+
+
+Property changes on: src/xmpp/xmpp_presence.c
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp/xmpp_presence.h
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im
+___________________________________________________________________
+Name: svn:ignore
+   + Makefile.in
+Makefile
+log.*
+.*
+test
+
+
+
+Property changes on: src/xmpp-im/test.c
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im/xmpp_im.c
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im/xmpp_im.h
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im/xmpp_im_callback.c
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im/xmpp_im_callback.h
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+Modified: src/xmpp-im/xmpp_im_contact.c
+===================================================================
+--- src/xmpp-im/xmpp_im_contact.c	2005-03-30 21:42:22 UTC (rev 29)
++++ src/xmpp-im/xmpp_im_contact.c	2005-03-31 22:29:22 UTC (rev 30)
+@@ -27,9 +27,16 @@
+ #include "xmpp_im_roster.h"
+ #include "xmpp_im_contact.h"
+ 
++
++/* use for debug */
++static int _contact_num = 0;
++
++
++
+ XmppIM_Contact * xmpp_im_contact_new (Xmpp_JID * jid, char * name) {
+ #ifdef XMPPIM_DEBUG
+-  printf("TRACE:xmpp_im_contact_new\n");
++  _contact_num += 1;
++  printf("TRACE:xmpp_im_contact_new %d - %s\n", _contact_num, name);
+ #endif
+   assert (jid);
+ 
+@@ -47,10 +54,11 @@
+ 
+ 
+ void xmpp_im_contact_free (XmppIM_Contact * contact) {
++  assert( contact != NULL);
+ #ifdef XMPPIM_DEBUG
+-  printf("TRACE:xmpp_im_contact_free\n");
++  _contact_num -=1;
++  printf("TRACE:xmpp_im_contact_free: %d - %s\n", _contact_num, contact->name);
+ #endif
+-  assert( contact != NULL);
+ 
+   /* unregister the contact from his group list */
+   xmpp_im_contact_remove_all_group (contact);
+
+
+Property changes on: src/xmpp-im/xmpp_im_contact.c
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im/xmpp_im_contact.h
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im/xmpp_im_opcode.c
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im/xmpp_im_opcode.h
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+Modified: src/xmpp-im/xmpp_im_roster.c
+===================================================================
+--- src/xmpp-im/xmpp_im_roster.c	2005-03-30 21:42:22 UTC (rev 29)
++++ src/xmpp-im/xmpp_im_roster.c	2005-03-31 22:29:22 UTC (rev 30)
+@@ -21,6 +21,9 @@
+ #include <assert.h>
+ #include <stdlib.h>
+ #include <string.h>
++
++#include "xmpp/xmpp_jid.h"
++
+ #include "xmpp_im_contact.h"
+ #include "xmpp_im_roster.h"
+ 
+@@ -44,6 +47,8 @@
+ 			       ecore_str_compare);
+   ecore_hash_set_free_value (tmp->users, 
+ 			     (Ecore_Free_Cb)xmpp_im_contact_free);
++  ecore_hash_set_free_key (tmp->users,
++			   (Ecore_Free_Cb) free);
+   
+   return tmp;
+ }
+@@ -87,7 +92,11 @@
+ 
+   assert (r != NULL && r->users != NULL && c != NULL);
+   
+-  ecore_hash_set (r->users, c->name, c);
++  /**
++   * We add the contact using it's jid.
++   * The jid must be deleted when the contact is removed
++   */
++  ecore_hash_set (r->users, xmpp_jid_get_bar (c->jid), c);
+ }
+ 
+ 
+@@ -102,8 +111,12 @@
+   xmpp_im_contact_remove_all_group (c);
+   
+   /* remove the contact from the user hash */
+-  XmppIM_Contact * tmp = XMPPIM_CONTACT (ecore_hash_remove (r->users, c->name));
++  char * jid = xmpp_jid_get_bar (c->jid);
++  XmppIM_Contact * tmp = XMPPIM_CONTACT (ecore_hash_remove (r->users, jid));
++  FREE (jid);
+   
++  
++
+   assert (tmp == c);
+ }
+ 
+@@ -149,9 +162,16 @@
+ 
+ 
+ 
++
++/* use to debug */
++static int _roster_group_num = 0;
++
++
++
+ XmppIM_RosterGroup * xmpp_im_roster_group_new (char * groupname) {
+ #ifdef XMPPIM_DEBUG
+-  printf("TRACE: xmpp_im_roster_group_new\n");
++  _roster_group_num += 1;
++  printf("TRACE: xmpp_im_roster_group_new: %d\n", _roster_group_num);
+ #endif
+   
+   XmppIM_RosterGroup * tmp = XMPPIM_ROSTERGROUP(malloc (sizeof (XmppIM_RosterGroup)));
+@@ -167,7 +187,8 @@
+ 
+ void xmpp_im_roster_group_free (XmppIM_RosterGroup * r) {
+ #ifdef XMPPIM_DEBUG
+-  printf("TRACE: xmpp_im_roster_group_free\n");
++  _roster_group_num -= 1;
++  printf("TRACE: xmpp_im_roster_group_free: %d\n", _roster_group_num);
+ #endif
+ 
+   /* free the group name */
+
+
+Property changes on: src/xmpp-im/xmpp_im_roster.c
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im/xmpp_im_roster.h
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im/xmpp_im_struct.h
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+
+From jol at sheep.berlios.de  Thu Apr 14 21:58:00 2005
+From: jol at sheep.berlios.de (Joël Vennin at BerliOS)
+Date: Thu, 14 Apr 2005 21:58:00 +0200
+Subject: [Eim-svn] r31 - / data data/themes data/themes/default data/themes/default/img data/themes/default/macros data/themes/default/parts data/themes/default/programs
+Message-ID: <200504141958.j3EJw0cv004912@sheep.berlios.de>
+
+Author: jol
+Date: 2005-04-14 21:57:57 +0200 (Thu, 14 Apr 2005)
+New Revision: 31
+
+Added:
+   data/
+   data/Makefile.am
+   data/themes/
+   data/themes/Makefile.am
+   data/themes/default/
+   data/themes/default/Makefile.am
+   data/themes/default/default.edc
+   data/themes/default/default.edj
+   data/themes/default/fonts/
+   data/themes/default/img/
+   data/themes/default/img/arrow_b.png
+   data/themes/default/img/arrow_l.png
+   data/themes/default/img/arrow_r.png
+   data/themes/default/img/arrow_t.png
+   data/themes/default/macros/
+   data/themes/default/macros/button.inc
+   data/themes/default/parts/
+   data/themes/default/parts/main.edc
+   data/themes/default/programs/
+   data/themes/default/programs/main.edc
+Modified:
+   ChangeLog
+   Makefile.am
+   configure.ac
+Log:
+Currently, i learn edje in order to create the eim graphical
+interface with it. Edje is really great and really powerful even 
+if i know only a little part of it. All the stuff is inside
+the data directory. More precisely, you can go inside the 
+data/themes/default and run the "make preview" command to see
+the gui. If you want to work on it your are welcome. So the 
+project is not dead, i work on it even if i'm busy.
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-03-31 22:29:22 UTC (rev 30)
++++ ChangeLog	2005-04-14 19:57:57 UTC (rev 31)
+@@ -1,4 +1,12 @@
+-2005-03/31(jol):
++2005-04-14(jol):
++	- Currently, i learn edje in order to create the eim graphical
++	  interface with it. Edje is really great and really powerful even 
++	  if i know only a little part of it. All the stuff is inside
++	  the data directory. More precisely, you can go inside the 
++	  data/themes/default and run the "make preview" command to see
++	  the gui. If you want to work on it your are welcome. So the 
++	  project is not dead, i work on it even if i'm busy.
++2005-03-31(jol):
+ 	- Fix a dirty bug inside the get_data of the egxp_message
+ 	- Fix a bug in the roster, in fact, all contacts were referenced by their
+ 	  name instead of their jid.
+
+Modified: Makefile.am
+===================================================================
+--- Makefile.am	2005-03-31 22:29:22 UTC (rev 30)
++++ Makefile.am	2005-04-14 19:57:57 UTC (rev 31)
+@@ -1,2 +1,2 @@
+-SUBDIRS=src doc
++SUBDIRS=data src doc
+ EXTRA_DIST=autogen.sh m4
+
+Modified: configure.ac
+===================================================================
+--- configure.ac	2005-03-31 22:29:22 UTC (rev 30)
++++ configure.ac	2005-04-14 19:57:57 UTC (rev 31)
+@@ -129,6 +129,9 @@
+ 
+ AC_OUTPUT([
+ Makefile
++data/Makefile
++data/themes/Makefile
++data/themes/default/Makefile
+ src/Makefile
+ src/egxp/Makefile
+ src/xmpp/Makefile
+
+Added: data/Makefile.am
+===================================================================
+--- data/Makefile.am	2005-03-31 22:29:22 UTC (rev 30)
++++ data/Makefile.am	2005-04-14 19:57:57 UTC (rev 31)
+@@ -0,0 +1 @@
++SUBDIRS=themes
+
+Added: data/themes/Makefile.am
+===================================================================
+--- data/themes/Makefile.am	2005-03-31 22:29:22 UTC (rev 30)
++++ data/themes/Makefile.am	2005-04-14 19:57:57 UTC (rev 31)
+@@ -0,0 +1 @@
++SUBDIRS=default
+
+Added: data/themes/default/Makefile.am
+===================================================================
+--- data/themes/default/Makefile.am	2005-03-31 22:29:22 UTC (rev 30)
++++ data/themes/default/Makefile.am	2005-04-14 19:57:57 UTC (rev 31)
+@@ -0,0 +1,25 @@
++THEME = default
++EDC = $(THEME).edc
++EET = $(EDC:%.edc=%.edj)
++SUFFIXES = .edc .edj
++
++CLEANFILES = $(EET)
++
++EXTRA_DIST= \
++	img     \
++	fonts   \
++	macros  \
++	parts   \
++	programs \
++	$(EDC)
++
++themedir = $(pkgdatadir)/themes
++theme_DATA = $(EET)
++
++all: $(EDC)
++
++.edc.edj:
++	edje_cc -v -id $(top_srcdir)/data/themes/$(THEME)/img -fd $(top_srcdir)/data/themes/$(THEME) $< $@
++
++preview: $(EET)
++	edje $(EET)
+
+Added: data/themes/default/default.edc
+===================================================================
+--- data/themes/default/default.edc	2005-03-31 22:29:22 UTC (rev 30)
++++ data/themes/default/default.edc	2005-04-14 19:57:57 UTC (rev 31)
+@@ -0,0 +1,28 @@
++#include "macros/button.inc"
++
++
++images {
++  image, "arrow_b.png" RAW;
++  image, "arrow_t.png" RAW;
++}
++
++
++collections {
++
++  
++  // Define the main interface
++  group {
++    name : "eim";
++    min : 128 256;
++    
++    
++    parts {
++#include "parts/main.edc"
++      
++    }
++  
++    programs {
++#include "programs/main.edc"
++    }
++  }
++}
+
+Added: data/themes/default/default.edj
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/default.edj
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/img/arrow_b.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/arrow_b.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/img/arrow_l.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/arrow_l.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/img/arrow_r.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/arrow_r.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/img/arrow_t.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/arrow_t.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/macros/button.inc
+===================================================================
+--- data/themes/default/macros/button.inc	2005-03-31 22:29:22 UTC (rev 30)
++++ data/themes/default/macros/button.inc	2005-04-14 19:57:57 UTC (rev 31)
+@@ -0,0 +1,184 @@
++#define BUTTON(NAME, IMG, IMG2, W, H, REL1_TO, REL1_REL, REL1_OFF, REL2_TO, REL2_REL, REL2_OFF) \
++      part {				\
++        name, NAME;			\
++	description {			\
++	  state, "default" 0.0;		\
++	  min, W H;			\
++	  max, W H;			\
++	  color, 255 255 255 127;	\
++	  rel1 {			\
++	    to, REL1_TO;		\
++	    relative, REL1_REL;		\
++	    offset, REL1_OFF;		\
++	  }				\
++	  rel2 {			\
++	    to, REL2_TO;		\
++	    relative, REL2_REL;		\
++	    offset, REL2_OFF;		\
++	  }				\
++	  image {			\
++	    normal, IMG;		\
++	  }				\
++	}				\
++	description {			\
++	  state, "over" 0.0;		\
++	  min, W H;			\
++	  max, W H; 			\
++	  color, 255 255 255 255;	\
++	  rel1 {			\
++	    to, REL1_TO;		\
++	    relative, REL1_REL;		\
++	    offset, REL1_OFF;		\
++	  }				\
++	  rel2 {			\
++	    to, REL2_TO;		\
++	    relative, REL2_REL;		\
++	    offset, REL2_OFF;		\
++	  }				\
++	  image {			\
++	    normal, IMG;		\
++	  }				\
++	}				\
++	description {			\
++	  state, "down" 0.0;		\
++	  min, W H;			\
++	  max, W H; 			\
++	  color, 255 255 255 255;	\
++	  rel1 {			\
++	    to, REL1_TO;		\
++	    relative, REL1_REL;		\
++	    offset, REL1_OFF;		\
++	  }				\
++	  rel2 {			\
++	    to, REL2_TO;		\
++	    relative, REL2_REL;		\
++	    offset, REL2_OFF;		\
++	  }				\
++	  image {			\
++	    normal, IMG2;		\
++	  }				\
++	}				\
++      }					
++
++
++
++#define BUTTON_CLIPPED(NAME, IMG, IMG2, W, H, REL1_TO, REL1_REL, REL1_OFF, REL2_TO, REL2_REL, REL2_OFF, CLIP) \
++      part {				\
++        name, NAME;			\
++        clip_to, CLIP;                  \
++	description {			\
++	  state, "default" 0.0;		\
++	  min, W H;			\
++	  max, W H;			\
++	  color, 255 255 255 127;	\
++	  rel1 {			\
++	    to, REL1_TO;		\
++	    relative, REL1_REL;		\
++	    offset, REL1_OFF;		\
++	  }				\
++	  rel2 {			\
++	    to, REL2_TO;		\
++	    relative, REL2_REL;		\
++	    offset, REL2_OFF;		\
++	  }				\
++	  image {			\
++	    normal, IMG;		\
++	  }				\
++	}				\
++	description {			\
++	  state, "over" 0.0;		\
++	  min, W H;			\
++	  max, W H; 			\
++	  color, 255 255 255 255;	\
++	  rel1 {			\
++	    to, REL1_TO;		\
++	    relative, REL1_REL;		\
++	    offset, REL1_OFF;		\
++	  }				\
++	  rel2 {			\
++	    to, REL2_TO;		\
++	    relative, REL2_REL;		\
++	    offset, REL2_OFF;		\
++	  }				\
++	  image {			\
++	    normal, IMG;		\
++	  }				\
++	}				\
++	description {			\
++	  state, "down" 0.0;		\
++	  min, W H;			\
++	  max, W H; 			\
++	  color, 255 255 255 255;	\
++	  rel1 {			\
++	    to, REL1_TO;		\
++	    relative, REL1_REL;		\
++	    offset, REL1_OFF;		\
++	  }				\
++	  rel2 {			\
++	    to, REL2_TO;		\
++	    relative, REL2_REL;		\
++	    offset, REL2_OFF;		\
++	  }				\
++	  image {			\
++	    normal, IMG2;		\
++	  }				\
++	}				\
++      }					
++
++
++
++
++
++
++#define BUTTON_PROG_ANIM(NAME)	        \
++      program {				\
++        name, NAME"-in";		\
++        signal, "mouse,in";		\
++        source, NAME;			\
++        action, STATE_SET "over" 0.0;	\
++        transition, DECELERATE 0.5;	\
++        target, NAME;			\
++      }					\
++      program {				\
++        name, NAME"-out";		\
++        signal, "mouse,out";		\
++        source, NAME;			\
++        action, STATE_SET "default" 0.0;\
++        transition, DECELERATE 0.5;	\
++        target, NAME;			\
++      }					\
++      program {				\
++        name, NAME"-down2";		\
++	signal, "mouse,down,1";		\
++	source, NAME;			\
++	action, STATE_SET "down" 0.0;	\
++        transition, LINEAR 0.0;	\
++	target, NAME;			\
++      }					\
++      program {				\
++        name, NAME"-up";		\
++	signal, "mouse,up,1";		\
++	source, NAME;			\
++	action, STATE_SET "over" 0.0;	\
++        transition, LINEAR 0.0;	\
++	target, NAME;			\
++      }					
++
++#define BUTTON_PROG_SIG(NAME, SIG_DOWN, SIG_UP)	        \
++      program {				\
++        name, NAME"-sig-dn";		\
++	signal, "mouse,down,1";		\
++	source, NAME;			\
++	action, SIGNAL_EMIT SIG_DOWN NAME;	\
++      }					\
++      program {				\
++        name, NAME"-sig-up";		\
++	signal, "mouse,up,1";		\
++	source, NAME;			\
++	action, SIGNAL_EMIT SIG_UP NAME;	\
++      }					
++
++#define BUTTON_PROG(NAME, SIG_DOWN, SIG_UP) \
++  BUTTON_PROG_ANIM(NAME) \
++  BUTTON_PROG_SIG(NAME, SIG_DOWN, SIG_UP)
++
+
+Added: data/themes/default/parts/main.edc
+===================================================================
+--- data/themes/default/parts/main.edc	2005-03-31 22:29:22 UTC (rev 30)
++++ data/themes/default/parts/main.edc	2005-04-14 19:57:57 UTC (rev 31)
+@@ -0,0 +1,130 @@
++// Define the base background
++part {
++  name : "base.bg";
++  type : RECT;
++  mouse_events : 0;
++  
++  
++  description {
++    state : "default" 0.0;
++    color : 0 0 0 100;
++  }
++
++  description {
++    state : "close" 1.0;
++    color : 0 0 0 100;
++    
++    rel1 {
++      relative, 0.0 0.0;
++      offset, 0 0;
++    }
++
++    rel2 {
++      relative, 1.0 0.0;
++      offset, -1 30;
++    }
++  }
++}
++
++
++// Define Header
++part {
++  name, "base.header";
++  type, RECT;
++  mouse_events, 0;
++  
++  // define the background color of the header
++  description {
++    state, "default" 0.0;
++    color, 0 0 0 180;
++    
++    rel1 {
++      relative, 0.0 0.0;
++      offset, 0 0;
++      to, "base.bg";
++    }
++    
++    rel2 {
++      relative, 1.0 0.0;
++      offset, -1 10;
++      to, "base.bg";
++    }
++  }
++}
++
++
++// define the footer
++part {
++  name, "base.footer";
++  type, RECT;
++  mouse_events, 0;
++
++  // define the background color of the header
++  description {
++    state, "default" 0.0;
++    color, 0 0 0 180;
++        
++    rel1 {
++      relative, 0.0 1.0;
++      offset, 0 -10;
++      to, "base.bg";
++    }
++    rel2 {
++      relative, 1.0 1.0;
++      offset, -1 -1;
++      to, "base.bg";
++    }
++  }
++}
++
++
++
++// Define the Minus clip
++part {
++  name : "base.minus.clip";
++  type : RECT;
++  mouse_events : 0;
++  
++  description {
++    state : "default" 0.0;
++    visible : 1;
++  }
++  
++  description {
++    state : "close" 0.0;
++    visible : 0;
++  }
++}
++
++
++// Define the Plus clip
++part {
++  name : "base.plus.clip";
++  type : RECT;
++  mouse_events : 0;
++  description {
++    state : "default" 0.0;
++    visible : 0;
++  }
++  description {
++    state : "close" 0.0;
++    visible : 1;
++  }
++}
++
++
++// Define button
++BUTTON_CLIPPED("base.minus", 
++	       "arrow_t.png", "arrow_t.png",
++	       14, 14,
++	       "base.header", 0.5 0.0, -7 -1,
++	       "base.header", 0.5 1.0, 7 -1,
++	       "base.minus.clip");
++
++// Define button
++BUTTON_CLIPPED("base.plus", 
++	       "arrow_b.png", "arrow_b.png",
++	       14, 14,
++	       "base.header", 0.5 0.0, -7 -1,
++	       "base.header", 0.5 1.0, 7 -1,
++	       "base.plus.clip");
+
+Added: data/themes/default/programs/main.edc
+===================================================================
+--- data/themes/default/programs/main.edc	2005-03-31 22:29:22 UTC (rev 30)
++++ data/themes/default/programs/main.edc	2005-04-14 19:57:57 UTC (rev 31)
+@@ -0,0 +1,45 @@
++program {
++  name :   "base.bg.close";
++  signal : "base,close";
++  source : "*";
++  action : STATE_SET "close" 0.0;
++  transition : ACCELERATE 1.0;
++  //target : "base.plus.clip";
++  //target : "base.minus.clip";
++  target : "base.bg";
++}
++
++program {
++  name :   "base.bg.open";
++  signal : "base,open";
++  source : "*";
++  action : STATE_SET "default" 0.0;
++  transition : ACCELERATE 1.0;
++  //target : "base.plus.clip";
++  // target : "base.minus.clip";
++  target : "base.bg";
++}
++
++program {
++  name :   "base.plusminus.open";
++  signal : "base,open";
++  source : "*";
++  action : STATE_SET "default" 0.0;
++  target : "base.plus.clip";
++  target : "base.minus.clip";
++  //target : "base.bg";
++}
++
++program {
++  name :   "base.plusminus.close";
++  signal : "base,close";
++  source : "*";
++  action : STATE_SET "close" 0.0;
++  target : "base.plus.clip";
++  target : "base.minus.clip";
++}
++
++
++// base.minus --> base, close
++BUTTON_PROG("base.minus", "", "base,close");
++BUTTON_PROG("base.plus", "", "base,open");
+
+
+
+From jol at sheep.berlios.de  Fri Apr 15 00:10:52 2005
+From: jol at sheep.berlios.de (Joël Vennin at BerliOS)
+Date: Fri, 15 Apr 2005 00:10:52 +0200
+Subject: [Eim-svn] r32 - / data/themes/default data/themes/default/img data/themes/default/macros data/themes/default/parts data/themes/default/programs
+Message-ID: <200504142210.j3EMAq9f032055@sheep.berlios.de>
+
+Author: jol
+Date: 2005-04-15 00:10:51 +0200 (Fri, 15 Apr 2005)
+New Revision: 32
+
+Added:
+   data/themes/default/img/ask.png
+   data/themes/default/img/away.png
+   data/themes/default/img/dnd.png
+   data/themes/default/img/ffc.png
+   data/themes/default/img/invisible.png
+   data/themes/default/img/offline.png
+   data/themes/default/img/online.png
+   data/themes/default/img/xa.png
+Modified:
+   ChangeLog
+   data/themes/default/default.edc
+   data/themes/default/default.edj
+   data/themes/default/macros/button.inc
+   data/themes/default/parts/main.edc
+   data/themes/default/programs/main.edc
+Log:
+- Add some test around edje. It a little buggy, but it is a beginning
+- Add a BUTTON_VLINE macro
+	
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-04-14 19:57:57 UTC (rev 31)
++++ ChangeLog	2005-04-14 22:10:51 UTC (rev 32)
+@@ -6,6 +6,9 @@
+ 	  data/themes/default and run the "make preview" command to see
+ 	  the gui. If you want to work on it your are welcome. So the 
+ 	  project is not dead, i work on it even if i'm busy.
++	- Add some test around edje. It a little buggy, but it is a beginning
++	- Add a BUTTON_VLINE macro
++	
+ 2005-03-31(jol):
+ 	- Fix a dirty bug inside the get_data of the egxp_message
+ 	- Fix a bug in the roster, in fact, all contacts were referenced by their
+
+Modified: data/themes/default/default.edc
+===================================================================
+--- data/themes/default/default.edc	2005-04-14 19:57:57 UTC (rev 31)
++++ data/themes/default/default.edc	2005-04-14 22:10:51 UTC (rev 32)
+@@ -2,8 +2,18 @@
+ 
+ 
+ images {
+-  image, "arrow_b.png" RAW;
+-  image, "arrow_t.png" RAW;
++  image : "arrow_b.png" RAW;
++  image : "arrow_t.png" RAW;
++  
++  image : "online.png"  RAW;
++  image : "ffc.png"  RAW;
++  image : "away.png" RAW;
++  image : "xa.png" RAW;
++  image : "dnd.png" RAW;
++  image : "invisible.png" RAW;
++  image : "offline.png" RAW;
++  
++  
+ }
+ 
+ 
+
+Modified: data/themes/default/default.edj
+===================================================================
+(Binary files differ)
+
+Added: data/themes/default/img/ask.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/ask.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/img/away.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/away.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/img/dnd.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/dnd.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/img/ffc.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/ffc.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/img/invisible.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/invisible.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/img/offline.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/offline.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/img/online.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/online.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/img/xa.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/xa.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Modified: data/themes/default/macros/button.inc
+===================================================================
+--- data/themes/default/macros/button.inc	2005-04-14 19:57:57 UTC (rev 31)
++++ data/themes/default/macros/button.inc	2005-04-14 22:10:51 UTC (rev 32)
+@@ -62,6 +62,72 @@
+ 
+ 
+ 
++#define BUTTON_VLINE(NAME, IMG, IMG2, W, H, PREVIOUS, CLIP) \
++      part {				\
++        name, NAME;			\
++	clip_to, CLIP;                  \
++	description {			\
++	  state, "default" 0.0;		\
++	  min, W H;			\
++	  max, W H;			\
++	  color, 255 255 255 80;	\
++	  rel1 {			\
++	    to, PREVIOUS;		\
++	    relative, 1.0 0.0;		\
++	    offset, 1 0;		\
++	  }				\
++	  rel2 {			\
++	    to, PREVIOUS;		\
++	    relative, 1.0 1.0;		\
++	    offset, W 0;		\
++	  }				\
++	  image {			\
++	    normal, IMG;		\
++	  }				\
++	}				\
++	description {			\
++	  state, "over" 0.0;		\
++	  min, W H;			\
++	  max, W H; 			\
++	  color, 255 255 255 255;	\
++	  rel1 {			\
++	   to, PREVIOUS;		\
++           relative, 1.0 0.0;		\
++	   offset, 1 0;			\
++	  }				\
++	  rel2 {			\
++	    to, PREVIOUS;		\
++	    relative, 1.0 1.0;		\
++	    offset, W 0;		\
++	  }				\
++	  image {			\
++	    normal, IMG;		\
++	  }				\
++	}				\
++	description {			\
++	  state, "down" 0.0;		\
++	  min, W H;			\
++	  max, W H; 			\
++	  color, 255 255 255 255;	\
++	  rel1 {			\
++	    to, PREVIOUS;		\
++	    relative, 1.0 0.0;		\
++	    offset, 1 0;                \
++	  }				\
++	  rel2 {			\
++	    to, PREVIOUS;		\
++	    relative, 1.0 1.0;		\
++	    offset, W H;		\
++	  }				\
++	  image {			\
++	    normal, IMG2;		\
++	  }				\
++	}				\
++      }					
++
++
++
++
+ #define BUTTON_CLIPPED(NAME, IMG, IMG2, W, H, REL1_TO, REL1_REL, REL1_OFF, REL2_TO, REL2_REL, REL2_OFF, CLIP) \
+       part {				\
+         name, NAME;			\
+@@ -182,3 +248,6 @@
+   BUTTON_PROG_ANIM(NAME) \
+   BUTTON_PROG_SIG(NAME, SIG_DOWN, SIG_UP)
+ 
++
++
++
+
+Modified: data/themes/default/parts/main.edc
+===================================================================
+--- data/themes/default/parts/main.edc	2005-04-14 19:57:57 UTC (rev 31)
++++ data/themes/default/parts/main.edc	2005-04-14 22:10:51 UTC (rev 32)
+@@ -21,7 +21,7 @@
+ 
+     rel2 {
+       relative, 1.0 0.0;
+-      offset, -1 30;
++      offset, -1 32;
+     }
+   }
+ }
+@@ -113,6 +113,74 @@
+ }
+ 
+ 
++
++/************************************************/
++/************************************************/
++/*  DEFINE THE TOGGLE BUTTON BAR                */
++/************************************************/
++/************************************************/
++#define BASE_ICON_TB_SIZE 14
++
++// Define the Toolbar Clip
++part {
++  name : "base.toggle.clip";
++  type : RECT;
++  mouse_events : 0;
++  description {
++    state : "default" 0.0;
++    visible : 0;
++  }
++  description {
++    state : "close" 0.0;
++    visible : 1;
++  }
++}
++
++
++BUTTON_CLIPPED("base.toggle.online",
++	       "online.png", "online.png",
++	       BASE_ICON_TB_SIZE, BASE_ICON_TB_SIZE,
++	       "base.bg", 0.0 0.0, 0 10,
++	       "base.bg", 0.0 0.0, BASE_ICON_TB_SIZE (BASE_ICON_TB_SIZE+10),
++	       "base.toggle.clip");
++
++BUTTON_VLINE("base.toggle.ffc",
++	     "ffc.png", "ffc.png",
++	     14, 14,
++	     "base.toggle.online",
++	     "base.toggle.clip");
++
++BUTTON_VLINE("base.toggle.away",
++	     "away.png", "away.png",
++	     14, 14,
++	     "base.toggle.ffc",
++	     "base.toggle.clip");
++
++BUTTON_VLINE("base.toggle.xa",
++	     "xa.png", "xa.png",
++	     14, 14,
++	     "base.toggle.away",
++	     "base.toggle.clip");
++
++BUTTON_VLINE("base.toggle.dnd",
++	     "dnd.png", "dnd.png",
++	     14, 14,
++	     "base.toggle.xa",
++	     "base.toggle.clip");
++
++BUTTON_VLINE("base.toggle.invisible",
++	     "invisible.png", "invisible.png",
++	     14, 14,
++	     "base.toggle.dnd",
++	     "base.toggle.clip");
++
++BUTTON_VLINE("base.toggle.offline",
++	     "offline.png", "invisible.png",
++	     14, 14,
++	     "base.toggle.invisible",
++	     "base.toggle.clip");
++
++
+ // Define button
+ BUTTON_CLIPPED("base.minus", 
+ 	       "arrow_t.png", "arrow_t.png",
+
+Modified: data/themes/default/programs/main.edc
+===================================================================
+--- data/themes/default/programs/main.edc	2005-04-14 19:57:57 UTC (rev 31)
++++ data/themes/default/programs/main.edc	2005-04-14 22:10:51 UTC (rev 32)
+@@ -4,8 +4,6 @@
+   source : "*";
+   action : STATE_SET "close" 0.0;
+   transition : ACCELERATE 1.0;
+-  //target : "base.plus.clip";
+-  //target : "base.minus.clip";
+   target : "base.bg";
+ }
+ 
+@@ -15,8 +13,6 @@
+   source : "*";
+   action : STATE_SET "default" 0.0;
+   transition : ACCELERATE 1.0;
+-  //target : "base.plus.clip";
+-  // target : "base.minus.clip";
+   target : "base.bg";
+ }
+ 
+@@ -27,19 +23,41 @@
+   action : STATE_SET "default" 0.0;
+   target : "base.plus.clip";
+   target : "base.minus.clip";
+-  //target : "base.bg";
++  target : "base.toggle.clip";
+ }
+ 
+ program {
+   name :   "base.plusminus.close";
+   signal : "base,close";
+   source : "*";
+-  action : STATE_SET "close" 0.0;
++  action : STATE_SET "close" 0.5;
+   target : "base.plus.clip";
+   target : "base.minus.clip";
++  target : "base.toggle.clip";
++  //  after : "try";
+ }
+ 
+-
+-// base.minus --> base, close
++/*
++program {
++  name : "try";
++  action : STATE_SET "close" 0.5;
++  target : "base.toggle.clip";
++}
++*/
+ BUTTON_PROG("base.minus", "", "base,close");
+ BUTTON_PROG("base.plus", "", "base,open");
++
++
++
++/************************************************/
++/************************************************/
++/*  DEFINE THE TOGGLE BUTTON BAR                */
++/************************************************/
++/************************************************/
++BUTTON_PROG("base.toggle.online", "", "");
++BUTTON_PROG("base.toggle.away", "", "");
++BUTTON_PROG("base.toggle.ffc", "", "");
++BUTTON_PROG("base.toggle.xa", "", "");
++BUTTON_PROG("base.toggle.dnd", "", "");
++BUTTON_PROG("base.toggle.invisible", "", "");
++BUTTON_PROG("base.toggle.offline", "", "");
+
+
+
+From jol at sheep.berlios.de  Wed Apr 20 14:42:40 2005
+From: jol at sheep.berlios.de (Joël Vennin at BerliOS)
+Date: Wed, 20 Apr 2005 14:42:40 +0200
+Subject: [Eim-svn] r33 - / src src/egxp src/gui src/xmpp src/xmpp-im
+Message-ID: <200504201242.j3KCgejT003592@sheep.berlios.de>
+
+Author: jol
+Date: 2005-04-20 14:42:36 +0200 (Wed, 20 Apr 2005)
+New Revision: 33
+
+Added:
+   SConstruct
+   src/SConscript
+   src/egxp/SConscript
+   src/gui/SConscript
+   src/xmpp-im/SConscript
+   src/xmpp/SConscript
+Modified:
+   ChangeLog
+Log:
+- Add a scons support (not finished)
+
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-04-14 22:10:51 UTC (rev 32)
++++ ChangeLog	2005-04-20 12:42:36 UTC (rev 33)
+@@ -1,3 +1,6 @@
++2005-04-20(jol):
++	- Add a scons support (not finished)
++
+ 2005-04-14(jol):
+ 	- Currently, i learn edje in order to create the eim graphical
+ 	  interface with it. Edje is really great and really powerful even 
+
+Added: SConstruct
+===================================================================
+--- SConstruct	2005-04-14 22:10:51 UTC (rev 32)
++++ SConstruct	2005-04-20 12:42:36 UTC (rev 33)
+@@ -0,0 +1,141 @@
++import os
++import SCons
++import errno
++
++SConsignFile()
++EnsureSConsVersion(0, 96)
++
++#eim version
++version = '0.0.1a'
++
++# Define options
++opts = Options('scache.conf')
++opts.AddOptions (
++    BoolOption('debug', 'Compile a debug version', 1),
++    PathOption('prefix', 'Set the install "prefix"', '/usr/local')
++    )
++
++#Define the environments
++env = Environment (options = opts,
++                   VERSION = version,
++                   TARBALL='eim-' + version + '.tar.bz2',
++                   DISTFILES = [],
++                   DISTTREE = '#eim-' + version,
++                   DISTCHECKDIR = '#eim-' + version + '/check'
++                   )
++
++#Save option and generate Help
++opts.Save ('options.cache', env)
++Help (opts.GenerateHelpText(env))
++
++
++#
++# source tar file builder
++#
++
++def distcopy (target, source, env):
++    treedir = str (target[0])
++
++    try:
++        os.mkdir (treedir)
++    except OSError, (errnum, strerror):
++        if errnum != errno.EEXIST:
++            print 'mkdir ', treedir, ':', strerror
++
++    cmd = 'tar cf - '
++    #
++    # we don't know what characters might be in the file names
++    # so quote them all before passing them to the shell
++    #
++    all_files = ([ str(s) for s in source ])
++    cmd += " ".join ([ "'%s'" % quoted for quoted in all_files])
++    cmd += ' | (cd ' + treedir + ' && tar xf -)'
++    p = os.popen (cmd)
++    return p.close ();
++
++def tarballer (target, source, env):            
++    cmd = 'tar -jcf ' + str (target[0]) +  ' ' + str(source[0]) + "  --exclude '*~'"
++    print 'running ', cmd, ' ... '
++    p = os.popen (cmd)
++    ret = p.close ()
++    return ret
++
++dist_bld = Builder (action = distcopy,
++                    target_factory = SCons.Node.FS.default_fs.Entry,
++                    source_factory = SCons.Node.FS.default_fs.Entry,
++                    multi = 1)
++
++tarball_bld = Builder (action = tarballer,
++                       target_factory = SCons.Node.FS.default_fs.Entry,
++                       source_factory = SCons.Node.FS.default_fs.Entry)
++
++env.Append (BUILDERS = {'Distribute' : dist_bld})
++env.Append (BUILDERS = {'Tarball' : tarball_bld})
++
++
++# source tarball
++Precious (env['DISTTREE'])
++env.Distribute (env['DISTTREE'],
++                ['SConstruct', 'AUTHORS' , 'COPYING' ,
++                 'ChangeLog' , 'INSTALL' , 'NEWS', 'README',
++                 'TODO'])
++srcdist = env.Tarball(env['TARBALL'], env['DISTTREE'])
++env.Alias ('dist', srcdist)
++
++
++#
++# don't leave the distree around 
++#
++env.AddPreAction (env['DISTTREE'], Action ('rm -rf ' + str (File (env['DISTTREE']))))
++#env.AddPostAction (srcdist, Action ('rm -rf ' + str (File (env['DISTTREE']))))
++
++
++
++# Configure
++conf = Configure(env)
++
++#Update CFLAGS in function of the options
++if env['debug']:
++    conf.env.Append (CCFLAGS = '-g3')
++else:
++    conf.env.Append (CCFLAGS = '-O3')
++conf.env.Append (CCFLAGS='-Wall')
++
++#
++#- Add the config command to the environment
++#- Generate an error if the command is not available
++#
++def checkConfig (config, env):
++    cf = env.WhereIs (config)
++    if cf == None or cf == "":
++        print "Impossible to find", config
++        Exit (1)
++    env.ParseConfig(config + ' --cflags --libs')
++
++
++#Check ecore-config
++checkConfig ('ecore-config', conf.env)
++checkConfig ('ewl-config', conf.env)
++checkConfig ('edje-config', conf.env)
++checkConfig ('esmart-config', conf.env)
++
++#Check for Expat
++if not conf.CheckLib('expat'):
++    print 'Did not find the expat library, exiting!'
++    Exit(1)
++
++#Add source directoy
++conf.env.Append (CPPPATH='#src/')
++    
++env = conf.Finish ()
++
++#Define bin, include, library directory
++install_inc = os.path.join (env['prefix'], 'include/eim')
++install_bin = os.path.join (env['prefix'], 'bin')
++install_lib = os.path.join (env['prefix'], 'lib')
++env.Alias ('install', [install_inc, install_bin, install_lib])
++
++
++Export ('env install_inc install_bin install_lib')
++for subdir in ['src']:
++    SConscript ('%s/SConscript' % subdir)
+
+Added: src/SConscript
+===================================================================
+--- src/SConscript	2005-04-14 22:10:51 UTC (rev 32)
++++ src/SConscript	2005-04-20 12:42:36 UTC (rev 33)
+@@ -0,0 +1,15 @@
++Import ('env install_inc install_bin install_lib')
++Export ('env install_inc install_bin install_lib')
++
++files = ['eim.c']
++
++eim = env.Program ('eim.c',
++                   LIBPATH=['#src/egxp', '#src/xmpp', '#src/xmpp-im', '#src/gui'],
++                   LIBS=['egxp', 'xmpp', 'xmppim', 'gui'])
++
++env.Alias('tarball', env.Distribute (env['DISTTREE'],
++                                     files + ['SConscript']))
++
++for subdir in ['egxp', 'xmpp', 'xmpp-im', 'gui']:
++    SConscript ('%s/SConscript' % subdir)
++    
+
+Added: src/egxp/SConscript
+===================================================================
+--- src/egxp/SConscript	2005-04-14 22:10:51 UTC (rev 32)
++++ src/egxp/SConscript	2005-04-20 12:42:36 UTC (rev 33)
+@@ -0,0 +1,25 @@
++import os
++Import ('env install_inc install_bin install_lib')
++
++files = ['egxp.c','egxp_condition.c',
++         'egxp_connection.c', 'egxp_message.c',
++         'egxp_node.c', 'egxp_opcode.c',
++         'egxp_protocol_handler.c']
++
++headers = ['egxp.h','egxp_condition.h',
++           'egxp_connection.h', 'egxp_message.h',
++           'egxp_node.h', 'egxp_opcode.h',
++           'egxp_protocol_handler.h',
++           'egxp_node_struct.h']
++
++libegxp = env.SharedLibrary('egxp', files)
++
++
++test = env.Program ('test.c', LIBPATH='./', LIBS='egxp')
++
++
++env.Alias('tarball', env.Distribute (env['DISTTREE'],
++                                     files + headers + ['test.c','SConscript']))
++
++env.Install (os.path.join (install_inc, "egxp"), headers)
++env.Install (install_lib, libegxp)
+
+Added: src/gui/SConscript
+===================================================================
+--- src/gui/SConscript	2005-04-14 22:10:51 UTC (rev 32)
++++ src/gui/SConscript	2005-04-20 12:42:36 UTC (rev 33)
+@@ -0,0 +1,12 @@
++import os
++
++Import ('env install_inc install_bin install_lib')
++files = ['gui_main.c']
++headers = ['gui_main.h']
++
++libgui = env.SharedLibrary('gui', files)
++
++env.Alias('tarball', env.Distribute (env['DISTTREE'],
++                                     files + headers + ['SConscript']))
++env.Install (os.path.join (install_inc, "gui"), headers)
++env.Install (install_lib, libgui)
+
+Added: src/xmpp/SConscript
+===================================================================
+--- src/xmpp/SConscript	2005-04-14 22:10:51 UTC (rev 32)
++++ src/xmpp/SConscript	2005-04-20 12:42:36 UTC (rev 33)
+@@ -0,0 +1,26 @@
++import os
++
++Import ('env install_inc install_bin install_lib')
++files = ['sha1.c', 'xmpp.c',
++         'xmpp_auth.c', 'xmpp_callback.c',
++         'xmpp_jid.c', 'xmpp_message.c',
++         'xmpp_opcode.c', 'xmpp_presence.c'
++         ]
++
++headers = ['sha1.h', 'xmpp.h',
++           'xmpp_auth.h', 'xmpp_callback.h',
++           'xmpp_jid.h', 'xmpp_message.h',
++           'xmpp_opcode.h', 'xmpp_presence.h'
++           ]
++
++libxmpp = env.SharedLibrary('xmpp', files)
++
++test = env.Program ('test.c',
++                    LIBPATH=['./', '#src/egxp'],
++                    LIBS=['egxp', 'xmpp']) 
++
++env.Alias('tarball', env.Distribute (env['DISTTREE'],
++                                     files + headers + ['test.c','SConscript']))
++
++env.Install (os.path.join (install_inc, "xmpp"), headers)
++env.Install (install_lib, libxmpp)
+
+Added: src/xmpp-im/SConscript
+===================================================================
+--- src/xmpp-im/SConscript	2005-04-14 22:10:51 UTC (rev 32)
++++ src/xmpp-im/SConscript	2005-04-20 12:42:36 UTC (rev 33)
+@@ -0,0 +1,24 @@
++import os
++
++Import ('env install_inc install_bin install_lib')
++files = ['xmpp_im.c', 'xmpp_im_callback.c',
++         'xmpp_im_contact.c', 'xmpp_im_opcode.c',
++         'xmpp_im_roster.c'
++         ]
++
++headers = ['xmpp_im.h', 'xmpp_im_callback.h',
++           'xmpp_im_contact.h', 'xmpp_im_opcode.h',
++           'xmpp_im_roster.h'
++           ]
++
++libxmppim = env.SharedLibrary('xmppim', files)
++
++test = env.Program ('test.c',
++                    LIBPATH=['./', '#src/egxp', '#src/xmpp'],
++                    LIBS=['egxp', 'xmpp', 'xmppim']) 
++
++env.Alias('tarball', env.Distribute (env['DISTTREE'],
++                                     files + headers + ['test.c','SConscript']))
++env.Install (os.path.join (install_inc, "xmpp-im"), headers)
++env.Install (install_lib, libxmppim)
++
+
+
+

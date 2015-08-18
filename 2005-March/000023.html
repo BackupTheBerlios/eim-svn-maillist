@@ -1,0 +1,797 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r27 - / src/egxp src/xmpp src/xmpp-im
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-March/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r27%20-%20/%20src/egxp%20src/xmpp%20src/xmpp-im&In-Reply-To=%3C200503211632.j2LGWSKd007533%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000022.html">
+   <LINK REL="Next"  HREF="000024.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r27 - / src/egxp src/xmpp src/xmpp-im</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r27%20-%20/%20src/egxp%20src/xmpp%20src/xmpp-im&In-Reply-To=%3C200503211632.j2LGWSKd007533%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r27 - / src/egxp src/xmpp src/xmpp-im">jol at sheep.berlios.de
+       </A><BR>
+    <I>Mon Mar 21 17:32:28 CET 2005</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000022.html">[Eim-svn] r26 - / src/egxp src/xmpp src/xmpp-im
+</A></li>
+        <LI>Next message: <A HREF="000024.html">[Eim-svn] r28 - / src/xmpp src/xmpp-im
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#23">[ date ]</a>
+              <a href="thread.html#23">[ thread ]</a>
+              <a href="subject.html#23">[ subject ]</a>
+              <a href="author.html#23">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-03-21 17:32:26 +0100 (Mon, 21 Mar 2005)
+New Revision: 27
+
+Modified:
+   ChangeLog
+   src/egxp/egxp.c
+   src/egxp/egxp.h
+   src/egxp/egxp_condition.c
+   src/egxp/egxp_condition.h
+   src/egxp/egxp_node.c
+   src/egxp/egxp_node.h
+   src/xmpp-im/test.c
+   src/xmpp-im/xmpp_im.h
+   src/xmpp-im/xmpp_im_callback.c
+   src/xmpp-im/xmpp_im_callback.h
+   src/xmpp-im/xmpp_im_contact.c
+   src/xmpp-im/xmpp_im_contact.h
+   src/xmpp-im/xmpp_im_opcode.c
+   src/xmpp-im/xmpp_im_opcode.h
+   src/xmpp-im/xmpp_im_roster.c
+   src/xmpp-im/xmpp_im_roster.h
+   src/xmpp/xmpp.h
+   src/xmpp/xmpp_jid.c
+   src/xmpp/xmpp_jid.h
+   src/xmpp/xmpp_message.h
+   src/xmpp/xmpp_opcode.c
+   src/xmpp/xmpp_opcode.h
+   src/xmpp/xmpp_presence.c
+Log:
+- Add egxp_node_print to display the defined protocol,
+- Add egxp_display to show all information to the egxp structure,
+- Now, it's forbidden to add condition to a node if the node is already 
+  registered to its parent
+- Code refactoring, use of xmpp_opcode_iq in xmpp_opcode_init and 
+  xmpp_im_opcode_init,
+- Continue to work on the XmppIM -&gt; make some stuff to fill the roster.
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-03-20 01:17:28 UTC (rev 26)
++++ ChangeLog	2005-03-21 16:32:26 UTC (rev 27)
+@@ -1,3 +1,10 @@
++2005-03-21(jol):
++	- Add egxp_node_print to display the defined protocol,
++	- Add egxp_display to show all information to the egxp structure,
++	- Now, it's forbidden to add condition to a node if the node is already registered to its parent,
++	- Code refactoring, use of xmpp_opcode_iq in xmpp_opcode_init and xmpp_im_opcode_init,
++	- Continue to work on the XmppIM -&gt; make some stuff to fill the roster.
++
+ 2005-03-19(jol):
+ 	- Continue to work on the XmppIM -&gt; make some stuff to fill the roster
+ 	- Add xmpp_im_callback and xmpp_im_opcode files
+
+Modified: src/egxp/egxp.c
+===================================================================
+--- src/egxp/egxp.c	2005-03-20 01:17:28 UTC (rev 26)
++++ src/egxp/egxp.c	2005-03-21 16:32:26 UTC (rev 27)
+@@ -79,6 +79,19 @@
+ }
+ 
+ 
++void egxp_display (Egxp *e) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_display\n&quot;);
++#endif
++  assert (e);
++  /* display registered opcode */
++  egxp_opcode_print(e-&gt;opcodes);
++
++  /* display registered protocol */
++  egxp_node_print (e-&gt;root, e-&gt;opcodes);
++}
++
++
+ void egxp_extension_free (void * e) {
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_extension_free\n&quot;);
+
+Modified: src/egxp/egxp.h
+===================================================================
+--- src/egxp/egxp.h	2005-03-20 01:17:28 UTC (rev 26)
++++ src/egxp/egxp.h	2005-03-21 16:32:26 UTC (rev 27)
+@@ -86,6 +86,11 @@
+ 
+ 
+ /**
++ * Display the information relative to the Egxp Structure
++ */
++void egxp_display (Egxp *e);
++
++/**
+  * Register an extension. It allows to store data, so when you define 
+  * other extension you can store you're structure inside
+  */
+
+Modified: src/egxp/egxp_condition.c
+===================================================================
+--- src/egxp/egxp_condition.c	2005-03-20 01:17:28 UTC (rev 26)
++++ src/egxp/egxp_condition.c	2005-03-21 16:32:26 UTC (rev 27)
+@@ -55,3 +55,11 @@
+ 
+   return condition-&gt;key == key &amp;&amp; condition-&gt;value == value;
+ }
++
++void egxp_condition_print (Egxp_Condition * c, Egxp_Opcode * op) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_condition_print\n&quot;);
++#endif
++  assert (c &amp;&amp; op);
++  printf(&quot;  condition: %s  --  %s\n&quot;, egxp_opcode_get_string(op, c-&gt;key), egxp_opcode_get_string(op, c-&gt;value));
++}
+
+Modified: src/egxp/egxp_condition.h
+===================================================================
+--- src/egxp/egxp_condition.h	2005-03-20 01:17:28 UTC (rev 26)
++++ src/egxp/egxp_condition.h	2005-03-21 16:32:26 UTC (rev 27)
+@@ -22,6 +22,7 @@
+ #define egxp_condition_header_h_
+ 
+ #include &quot;egxp_node_struct.h&quot;
++#include &quot;egxp_opcode.h&quot;
+ 
+ /**
+  * Create a egxp condition structure initialized with it parameters
+@@ -40,5 +41,12 @@
+  */
+ unsigned char egxp_condition_equals (Egxp_Condition * condition, const int key, const int value);
+ 
+- 
++
++/**
++ * Display the Egxp_Condition structure
++ * @param c: The egxp condition to display
++ * @param op: use to get the string representation.
++ */
++void egxp_condition_print (Egxp_Condition * c, Egxp_Opcode * op); 
++
+ #endif
+
+Modified: src/egxp/egxp_node.c
+===================================================================
+--- src/egxp/egxp_node.c	2005-03-20 01:17:28 UTC (rev 26)
++++ src/egxp/egxp_node.c	2005-03-21 16:32:26 UTC (rev 27)
+@@ -83,7 +83,11 @@
+ #endif
+   
+   assert (cn &amp;&amp; cond);
+-  
++   
++  /* check if the node is already attached to a parent. If it is already 
++     attached we generate an error */
++  assert (cn-&gt;parent == NULL);
++
+   /* check if the conditions lists is created */
+   if (cn-&gt;conditions == NULL) {
+     cn-&gt;conditions = ecore_list_new ();
+@@ -179,3 +183,22 @@
+   /* go to the first node */
+   return ecore_dlist_goto_last(ltmp);
+ }
++
++
++void __print_childs (void * node, void * user_data) {
++  Ecore_DList * list = ECORE_DLIST (ECORE_HASH_NODE(node)-&gt;value);
++  ecore_dlist_for_each (list, ECORE_FOR_EACH (egxp_node_print), user_data);
++  //egxp_node_print (value, EGXP_OPCODE (user_data));
++}
++
++
++void egxp_node_print (Egxp_Node * n, Egxp_Opcode * op) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_node_print\n&quot;);
++#endif
++  assert (n &amp;&amp; op);
++  printf(&quot;Tag name: %s -- CB begin: %p -- CB end: %p\n&quot;, egxp_opcode_get_string(op, n-&gt;tag), n-&gt;begin_cb, n-&gt;end_cb);
++  
++  if (n-&gt;conditions) ecore_list_for_each (n-&gt;conditions, ECORE_FOR_EACH (egxp_condition_print), op);
++  if (n-&gt;childs) ecore_hash_for_each_node (n-&gt;childs, ECORE_FOR_EACH (__print_childs), op);
++}
+
+Modified: src/egxp/egxp_node.h
+===================================================================
+--- src/egxp/egxp_node.h	2005-03-20 01:17:28 UTC (rev 26)
++++ src/egxp/egxp_node.h	2005-03-21 16:32:26 UTC (rev 27)
+@@ -22,7 +22,7 @@
+ #define egxp_node_header_h_
+ 
+ #include &quot;egxp_node_struct.h&quot;
+-
++#include &quot;egxp_opcode.h&quot;
+ /****************************************************************/
+ /****************************************************************/
+ /****************************************************************/
+@@ -76,4 +76,10 @@
+  */
+ Egxp_Node * egxp_node_get_child (Egxp_Node * node, int id);
+ 
++
++/**
++ * Display to standard output the contains of the Egxp Node sturcture
++ */
++void egxp_node_print (Egxp_Node * n, Egxp_Opcode * op);
++
+ #endif
+
+Modified: src/xmpp/xmpp.h
+===================================================================
+--- src/xmpp/xmpp.h	2005-03-20 01:17:28 UTC (rev 26)
++++ src/xmpp/xmpp.h	2005-03-21 16:32:26 UTC (rev 27)
+@@ -32,6 +32,9 @@
+ 
+ #define XMPP_REGISTER &quot;__XMPP_REGISTER__&quot;
+ 
++#define XMPP_GET(_eg) \
++       XMPP(egxp_extension_get_from_string (_eg, XMPP_REGISTER))
++
+ /**
+  * Register the xmpp protocol
+  *  - initialize the xmpp structure
+
+Modified: src/xmpp/xmpp_jid.c
+===================================================================
+--- src/xmpp/xmpp_jid.c	2005-03-20 01:17:28 UTC (rev 26)
++++ src/xmpp/xmpp_jid.c	2005-03-21 16:32:26 UTC (rev 27)
+@@ -37,7 +37,7 @@
+   
+   tmp-&gt;user = strdup (user);
+   tmp-&gt;host = strdup (host);
+-  tmp-&gt;resource = strdup (resource);
++  tmp-&gt;resource = resource?strdup (resource):NULL;
+ 
+   return tmp;
+ }
+@@ -56,7 +56,39 @@
+   FREE (jid);
+ }
+ 
++Xmpp_JID * xmpp_jid_new_from_bare (char * jidbar) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_jid_new_from_bar\n&quot;);
++#endif 
++  assert (jidbar);
++  Xmpp_JID * tmp = XMPP_JID(malloc (sizeof(Xmpp_JID)));
+ 
++  /* split the jidbare in two parts */
++  char * at = strchr (jidbar, '@');
++  char * slash = strchr (jidbar, '/');
++
++  /* check if there is a name */
++  if (at != NULL) {
++    tmp-&gt;user = strndup ((const char*)jidbar, (size_t) (((int)at) - ((int)jidbar)) / sizeof (char));
++    at = (at+1);
++  } else {
++    tmp-&gt;user = strdup(&quot;&quot;);
++    at = jidbar;
++  }
++
++  /* set the host */
++  if (slash == NULL) {
++    tmp-&gt;host = strdup ((char*) at);
++    tmp-&gt;resource = strdup (&quot;&quot;);
++  } else {
++    /* set the host */
++    tmp-&gt;host = strndup ((const char*) at, (size_t) (((int)slash) - ((int)at)) / sizeof(char));
++    tmp-&gt;resource = strdup((const char*) (slash + 1));
++  }
++
++  return tmp;
++}
++
+ char * xmpp_jid_get_bar (Xmpp_JID * jid) {
+ #ifdef XMPP_DEBUG
+   printf(&quot;TRACE: xmpp_jid_get_bar\n&quot;);
+
+Modified: src/xmpp/xmpp_jid.h
+===================================================================
+--- src/xmpp/xmpp_jid.h	2005-03-20 01:17:28 UTC (rev 26)
++++ src/xmpp/xmpp_jid.h	2005-03-21 16:32:26 UTC (rev 27)
+@@ -42,7 +42,14 @@
+  */
+ Xmpp_JID * xmpp_jid_new (char * user, char * host, char * resource);
+ 
++/**
++ * Create a new jid from a bar representation
++ * @param bar: the bar representation
++ * @return the newly created jid
++ */ 
++Xmpp_JID * xmpp_jid_new_from_bar (char * jidbar);
+ 
++
+ /**
+  * Free the structure
+  */
+@@ -54,7 +61,7 @@
+  * @param jid: The jid used to get the bar jid
+  * @return the jid bare, you should free the memory
+  */
+-char * xmpp_jid_get_bar (Xmpp_JID * jid);
++char * xmpp_jid_get_bare (Xmpp_JID * jid);
+ 
+ 
+ /**
+
+Modified: src/xmpp/xmpp_message.h
+===================================================================
+--- src/xmpp/xmpp_message.h	2005-03-20 01:17:28 UTC (rev 26)
++++ src/xmpp/xmpp_message.h	2005-03-21 16:32:26 UTC (rev 27)
+@@ -34,7 +34,7 @@
+ /**
+  * This function is an helper function to 
+  * build preconfigured iq message.
+- * @param type: &quot;set&quot; or &quot;get&quot; must not be null
++ * @param type: &quot;set&quot;, &quot;get&quot; or &quot;result&quot; must not be null
+  * @param id: &quot;id of the query&quot; must not be null
+  * @param to: &quot;the destination&quot;
+  * @return the build message
+
+Modified: src/xmpp/xmpp_opcode.c
+===================================================================
+--- src/xmpp/xmpp_opcode.c	2005-03-20 01:17:28 UTC (rev 26)
++++ src/xmpp/xmpp_opcode.c	2005-03-21 16:32:26 UTC (rev 27)
+@@ -26,6 +26,7 @@
+ #include &quot;xmpp_auth.h&quot;
+ #include &quot;xmpp_opcode.h&quot;
+ 
++
+ void xmpp_opcode_init (Egxp * eg) {
+ #ifdef XMPP_DEBUG
+   printf(&quot;TRACE: xmpp_opcode_init\n&quot;);
+@@ -43,6 +44,7 @@
+   egxp_opcode_add (eg-&gt;opcodes, XMPP_ATT_XMLNS);
+   egxp_opcode_add (eg-&gt;opcodes, XMPP_ATT_XMLNS_STREAM);
+   
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_STREAM_XMLNS);
+   egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_STREAM_XMLNS_STREAM);
+   egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_STREAM_VERSION);
+   
+@@ -88,8 +90,6 @@
+   /********************/
+   /* define stream */
+   Egxp_Node * stream = egxp_node_new (egxp_opcode_get_id (eg-&gt;opcodes, XMPP_TAG_STREAM));
+-  egxp_node_add_child (eg-&gt;root, stream);
+-  
+   egxp_node_add_condition (stream, egxp_condition_new (egxp_opcode_get_id (eg-&gt;opcodes, XMPP_ATT_XMLNS),
+ 						       egxp_opcode_get_id (eg-&gt;opcodes, XMPP_VALUE_STREAM_XMLNS)));
+   
+@@ -97,17 +97,28 @@
+ 						       egxp_opcode_get_id (eg-&gt;opcodes, XMPP_VALUE_STREAM_XMLNS_STREAM)));
+   
+   egxp_node_set_cb (stream, xmpp_callback_stream_begin_cb, NULL);
++  egxp_node_add_child (eg-&gt;root, stream);
+ 
+-
+-  /* maybe put this inside the xmpp_auth */
++  /*************************************************************************************/
+   /* define iq type='result' id='auth_1' */
+-  Egxp_Node * iq = egxp_node_new (egxp_opcode_get_id (eg-&gt;opcodes, XMPP_TAG_IQ));
++  /*************************************************************************************/  
++  Egxp_Node * iq = xmpp_opcode_iq (eg-&gt;opcodes, XMPP_VALUE_IQ_RESULT, XMPP_VALUE_IQ_AUTH_1);
++  egxp_node_set_cb (iq, NULL, xmpp_auth_auth_1_cb);
+   egxp_node_add_child (stream, iq);
+-  /* type = result */
+-  egxp_node_add_condition (iq, egxp_condition_new (egxp_opcode_get_id (eg-&gt;opcodes, XMPP_ATT_TYPE),
+-						   egxp_opcode_get_id (eg-&gt;opcodes, XMPP_VALUE_IQ_RESULT)));
+-  egxp_node_add_condition (iq, egxp_condition_new (egxp_opcode_get_id (eg-&gt;opcodes, XMPP_ATT_ID),
+-						   egxp_opcode_get_id (eg-&gt;opcodes, XMPP_VALUE_IQ_AUTH_1)));
+-  /* attach callback */
+-  egxp_node_set_cb (iq, NULL, xmpp_auth_auth_1_cb);
+ }
++
++
++
++Egxp_Node * xmpp_opcode_iq (Egxp_Opcode * opcodes, char * type, char * id) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_opcode_iq\n&quot;);
++#endif 
++  assert (opcodes);
++
++  Egxp_Node * iq = egxp_node_new (egxp_opcode_get_id (opcodes, XMPP_TAG_IQ));
++  egxp_node_add_condition (iq, egxp_condition_new (egxp_opcode_get_id (opcodes, XMPP_ATT_TYPE),
++						       egxp_opcode_get_id (opcodes, type)));
++  if(id) egxp_node_add_condition (iq, egxp_condition_new (egxp_opcode_get_id (opcodes, XMPP_ATT_ID),
++						       egxp_opcode_get_id (opcodes, id)));
++  return iq;
++}
+
+Modified: src/xmpp/xmpp_opcode.h
+===================================================================
+--- src/xmpp/xmpp_opcode.h	2005-03-20 01:17:28 UTC (rev 26)
++++ src/xmpp/xmpp_opcode.h	2005-03-21 16:32:26 UTC (rev 27)
+@@ -84,4 +84,12 @@
+ void xmpp_opcode_init (Egxp * eg);
+ 
+ 
++/**
++ * It is an helper function to reduce code size. It create an Egxp_Node 
++ * with specific value.
++ * @param opcodes: the opcodes structure used to get id.
++ * @param type: The type of the iq message (get, set, result)
++ * @param id: The id of the message. If the id is null the id condition is not added.
++ */
++Egxp_Node * xmpp_opcode_iq (Egxp_Opcode * opcodes, char * type, char * id);
+ #endif
+
+Modified: src/xmpp/xmpp_presence.c
+===================================================================
+--- src/xmpp/xmpp_presence.c	2005-03-20 01:17:28 UTC (rev 26)
++++ src/xmpp/xmpp_presence.c	2005-03-21 16:32:26 UTC (rev 27)
+@@ -20,8 +20,8 @@
+   Egxp_Opcode * opcodes = EGXP_EXTENSION (x)-&gt;parent-&gt;opcodes;
+   assert (opcodes);
+   /* append the show value */
+-  char * data = egxp_opcode_get_string (opcodes,show);
+-  egxp_message_append_data (show_msg, data, strlen (data));
++  const char * data = egxp_opcode_get_string (opcodes, show);
++  egxp_message_append_data (show_msg, (char*)data, strlen (data));
+   egxp_message_add_child (message, show_msg);
+ 
+   /* send the message */
+
+Modified: src/xmpp-im/test.c
+===================================================================
+--- src/xmpp-im/test.c	2005-03-20 01:17:28 UTC (rev 26)
++++ src/xmpp-im/test.c	2005-03-21 16:32:26 UTC (rev 27)
+@@ -79,6 +79,9 @@
+   Xmpp * xm = xmpp_register (eg);
+   XmppIM * xmppim = xmpp_im_register (eg);
+ 
++  /* display the egxp structure */
++  egxp_display(eg);
++
+   /* after 3 second we quit the ecore loop */
+   Ecore_Timer * timer = ecore_timer_add (15, timer_cb, NULL);
+   printf(&quot;Quit automaticly (after 15 seconds)\n&quot;);
+
+Modified: src/xmpp-im/xmpp_im.h
+===================================================================
+--- src/xmpp-im/xmpp_im.h	2005-03-20 01:17:28 UTC (rev 26)
++++ src/xmpp-im/xmpp_im.h	2005-03-21 16:32:26 UTC (rev 27)
+@@ -8,6 +8,8 @@
+ 
+ #define XMPPIM_REGISTER &quot;__XMPPIM_REGISTER__&quot;
+ 
++#define XMPPIM_GET(_eg) \
++       XMPPIM(egxp_extension_get_from_string (_eg, XMPPIM_REGISTER))
+ 
+ /**
+  * Should register the xmpp_im extension
+
+Modified: src/xmpp-im/xmpp_im_callback.c
+===================================================================
+--- src/xmpp-im/xmpp_im_callback.c	2005-03-20 01:17:28 UTC (rev 26)
++++ src/xmpp-im/xmpp_im_callback.c	2005-03-21 16:32:26 UTC (rev 27)
+@@ -1,14 +1,55 @@
+ #include &lt;assert.h&gt;
+ #include &lt;stdio.h&gt;
++
++#include &quot;xmpp/xmpp.h&quot;
++
++#include &quot;xmpp_im_struct.h&quot;
++#include &quot;xmpp_im_opcode.h&quot;
++#include &quot;xmpp_im.h&quot;
+ #include &quot;xmpp_im_callback.h&quot;
+ 
+ 
+-
+ void xmpp_im_callback_roster_init(Egxp_Message *msg, void* data) {
+ #ifdef XMPPIM_DEBUG
+   printf(&quot;TRACE: xmpp_im_callback_roster_init\n&quot;);
+ #endif
+   assert (msg &amp;&amp; data);
+ 
+-  printf(&quot;Callback Roster\n&quot;);
++  Xmpp * x = XMPP_GET(data);
++
++  /* build a message to prevent that we want roster information */
++  /* create the iq type=&quot;get&quot; */
++  Egxp_Message * iq = xmpp_message_iq (XMPP_VALUE_IQ_GET, XMPP_IM_VALUE_IQ_ROSTER_REQUEST,
++				       x-&gt;jid-&gt;host);
++  Egxp_Message * query = xmpp_message_query (XMPP_IM_VALUE_QUERY_ROSTER); 
++  egxp_message_add_child (iq, query);
++
++  /* now send it */
++  Egxp_Connection * conn = EGXP_EXTENSION(x)-&gt;parent-&gt;connection;
++  egxp_connection_send_message (conn, iq, 1);
+ }
++
++
++void xmpp_im_callback_roster_populate(Egxp_Message *msg, void* data) {
++#ifdef XMPPIM_DEBUG
++  printf(&quot;TRACE: xmpp_im_callback_roster_populate\n&quot;);
++#endif
++  assert (msg &amp;&amp; data);
++  
++  Egxp * eg = EGXP(data);
++
++  /* get the query, all data are inside the query */
++  Egxp_Message * query = egxp_message_get_child(msg, XMPP_TAG_QUERY);
++  assert (query); 
++
++  /* now get the list of all item message */
++  Ecore_List * child_list = egxp_message_get_childs(query, XMPP_IM_TAG_ITEM);
++
++  /* for each element try to create/update the contact */
++  xmpp_im_roster_update_from_item_messages (XMPPIM_GET(eg)-&gt;roster, child_list);
++
++  /* free list */
++  ecore_list_destroy (child_list);
++
++  printf(&quot;Callback Roster Populate !!!\n&quot;);
++}
+
+Modified: src/xmpp-im/xmpp_im_callback.h
+===================================================================
+--- src/xmpp-im/xmpp_im_callback.h	2005-03-20 01:17:28 UTC (rev 26)
++++ src/xmpp-im/xmpp_im_callback.h	2005-03-21 16:32:26 UTC (rev 27)
+@@ -11,4 +11,12 @@
+  */
+ void xmpp_im_callback_roster_init(Egxp_Message * msg, void* data);
+ 
++
++/**
++ * This callback is called when the request roster has been accepted.
++ * So this method try to populate the roster.
++ * @param msg: a message with the request acceptation
++ * @param data: the egxp structure
++ */
++void xmpp_im_callback_roster_populate(Egxp_Message * msg, void* data);
+ #endif
+
+Modified: src/xmpp-im/xmpp_im_contact.c
+===================================================================
+--- src/xmpp-im/xmpp_im_contact.c	2005-03-20 01:17:28 UTC (rev 26)
++++ src/xmpp-im/xmpp_im_contact.c	2005-03-21 16:32:26 UTC (rev 27)
+@@ -21,6 +21,9 @@
+ #include &lt;assert.h&gt;
+ #include &lt;stdio.h&gt;
+ 
++#include &quot;xmpp/xmpp_opcode.h&quot;
++#include &quot;xmpp/xmpp_jid.h&quot;
++#include &quot;xmpp_im_roster.h&quot;
+ #include &quot;xmpp_im_contact.h&quot;
+ 
+ XmppIM_Contact * xmpp_im_contact_new (Xmpp_JID * jid, char * name) {
+@@ -93,3 +96,37 @@
+   printf(&quot;Surname %s jid: %s\n&quot;, c-&gt;name, tmp);
+   FREE (tmp);
+ }
++
++
++XmppIM_Contact * xmpp_im_contact_create_from_item_message (XmppIM_Roster * r, Egxp_Message * m) {
++#ifdef XMPPIM_DEBUG
++  printf(&quot;TRACE: xmpp_im_contact_create_from_item_message\n&quot;);
++#endif
++  assert (r &amp;&amp; m);
++
++  /* get the jid (bare) from the message */
++  char * jid = egxp_message_get_attribute (m, XMPP_ATT_JID);
++  assert (jid);
++
++  /* check if we have already this contact */
++  XmppIM_Contact * contact = xmpp_im_roster_get_contact(r, jid);
++
++  if (contact == NULL) {
++    Xmpp_JID * tmp_jid = xmpp_jid_new_from_bare (jid);
++    /* get the name of the contact*/
++    char * contact_name = egxp_message_get_attribute (m, XMPP_ATT_NAME);
++    /* create a contact inside the contact variable */
++    if(contact_name == NULL) {
++      contact = xmpp_im_contact_new (tmp_jid, jid);
++    } else {
++      contact = xmpp_im_contact_new (tmp_jid, contact_name);
++      free (contact_name);
++    }
++    xmpp_im_roster_add_contact(r, contact);
++  }
++  /* free the jid from the message */
++  free(jid);
++  
++
++  return contact;
++}
+
+Modified: src/xmpp-im/xmpp_im_contact.h
+===================================================================
+--- src/xmpp-im/xmpp_im_contact.h	2005-03-20 01:17:28 UTC (rev 26)
++++ src/xmpp-im/xmpp_im_contact.h	2005-03-21 16:32:26 UTC (rev 27)
+@@ -56,4 +56,13 @@
+  */
+ void xmpp_im_contact_display (void *c, void * user_data);
+ 
++
++/**
++ * This method try to create a contact, or to update it.
++ * If the contact is created, it is automatically added to the roster
++ * @param r: The roster where we can add the contact
++ * @param m: The message used to create/update the contact
++ * @return the created/updated contact.
++ */
++XmppIM_Contact * xmpp_im_contact_create_from_item_message (XmppIM_Roster * r, Egxp_Message * m);
+ #endif
+
+Modified: src/xmpp-im/xmpp_im_opcode.c
+===================================================================
+--- src/xmpp-im/xmpp_im_opcode.c	2005-03-20 01:17:28 UTC (rev 26)
++++ src/xmpp-im/xmpp_im_opcode.c	2005-03-21 16:32:26 UTC (rev 27)
+@@ -5,6 +5,7 @@
+ 
+ #include &quot;xmpp_im_opcode.h&quot;
+ 
++#define XMPP_IM
+ 
+ 
+ void xmpp_im_opcode_init (Egxp *eg) {
+@@ -14,25 +15,29 @@
+   assert (eg);
+   assert (eg-&gt;opcodes);
+ 
+-  /* 
+-     get the message when the authentification is done
+-     and associate a callback to it.
+-     we need to catch &lt;iq id='auth_2' type='result'/&gt;
+-  */
+-  assert (eg-&gt;root);
+-  
+-  Egxp_Node * stream = egxp_node_get_child(eg-&gt;root, 
+-					   egxp_opcode_get_id(eg-&gt;opcodes, XMPP_TAG_STREAM));
++  /******************************************************************************************/
++  /* Register opcode */
++  /******************************************************************************************/
++  egxp_opcode_add(eg-&gt;opcodes, XMPP_IM_VALUE_IQ_ROSTER_REQUEST);
++  egxp_opcode_add(eg-&gt;opcodes, XMPP_IM_VALUE_QUERY_ROSTER);
++  egxp_opcode_add(eg-&gt;opcodes, XMPP_IM_TAG_ITEM);
++  egxp_opcode_add(eg-&gt;opcodes, XMPP_IM_TAG_GROUP);
++
++  assert (eg-&gt;root);  
++  Egxp_Node * stream = egxp_node_get_child(eg-&gt;root, egxp_opcode_get_id(eg-&gt;opcodes, XMPP_TAG_STREAM));
+   assert (stream);
+-  
++
++  /******************************************************************************************/
+   /* define iq type='result' id='auth_2' */
+-  Egxp_Node * iq = egxp_node_new (egxp_opcode_get_id (eg-&gt;opcodes, XMPP_TAG_IQ));
++  /******************************************************************************************/
++  Egxp_Node * iq = xmpp_opcode_iq (eg-&gt;opcodes, XMPP_VALUE_IQ_RESULT, XMPP_VALUE_IQ_AUTH_2);
++  egxp_node_set_cb (iq, NULL, xmpp_im_callback_roster_init);
+   egxp_node_add_child (stream, iq);
+-  /* type = result */
+-  egxp_node_add_condition (iq, egxp_condition_new (egxp_opcode_get_id (eg-&gt;opcodes, XMPP_ATT_TYPE),
+-						   egxp_opcode_get_id (eg-&gt;opcodes, XMPP_VALUE_IQ_RESULT)));
+-  egxp_node_add_condition (iq, egxp_condition_new (egxp_opcode_get_id (eg-&gt;opcodes, XMPP_ATT_ID),
+-						   egxp_opcode_get_id (eg-&gt;opcodes, XMPP_VALUE_IQ_AUTH_2)));
+-  /* attach callback */
+-  egxp_node_set_cb (iq, NULL, xmpp_im_callback_roster_init);
++
++ /******************************************************************************************/
++  /* define iq type='result' id='roster_request' */
++  /******************************************************************************************/
++  iq = xmpp_opcode_iq (eg-&gt;opcodes, XMPP_VALUE_IQ_RESULT, XMPP_IM_VALUE_IQ_ROSTER_REQUEST);
++  egxp_node_set_cb (iq, NULL, xmpp_im_callback_roster_populate);
++  egxp_node_add_child (stream, iq);
+ }
+
+Modified: src/xmpp-im/xmpp_im_opcode.h
+===================================================================
+--- src/xmpp-im/xmpp_im_opcode.h	2005-03-20 01:17:28 UTC (rev 26)
++++ src/xmpp-im/xmpp_im_opcode.h	2005-03-21 16:32:26 UTC (rev 27)
+@@ -3,6 +3,14 @@
+ 
+ #include &quot;egxp/egxp.h&quot;
+ 
++
++#define XMPP_IM_VALUE_IQ_ROSTER_REQUEST   &quot;roster_request&quot;
++#define XMPP_IM_VALUE_QUERY_ROSTER        &quot;jabber:iq:roster&quot; 
++
++#define XMPP_IM_TAG_ITEM		  &quot;item&quot;
++#define XMPP_IM_TAG_GROUP                 &quot;group&quot;
++
++
+ /**
+  * Initialize all opcode of the xmpp_im protocol
+  * @param eg: The egxp structure
+
+Modified: src/xmpp-im/xmpp_im_roster.c
+===================================================================
+--- src/xmpp-im/xmpp_im_roster.c	2005-03-20 01:17:28 UTC (rev 26)
++++ src/xmpp-im/xmpp_im_roster.c	2005-03-21 16:32:26 UTC (rev 27)
+@@ -240,3 +240,19 @@
+   printf(&quot;--- Roster Information ---\n&quot;);
+   ecore_hash_for_each_node (r-&gt;groups, ECORE_FOR_EACH(xmpp_im_roster_group_display), NULL);
+ }
++
++
++
++
++void xmpp_im_roster_update_from_item_messages (XmppIM_Roster *r, Ecore_List * list) {
++#ifdef XMPPIM_DEBUG
++  printf(&quot;TRACE: xmpp_im_roster_update_from_item_messages\n&quot;);
++#endif
++  assert (r &amp;&amp; list);
++
++  Egxp_Message * msg_item;
++  ecore_list_goto_first(list);
++  while ((msg_item = EGXP_MESSAGE(ecore_list_next(list))) != NULL) {
++	
++  }
++}
+
+Modified: src/xmpp-im/xmpp_im_roster.h
+===================================================================
+--- src/xmpp-im/xmpp_im_roster.h	2005-03-20 01:17:28 UTC (rev 26)
++++ src/xmpp-im/xmpp_im_roster.h	2005-03-21 16:32:26 UTC (rev 27)
+@@ -95,8 +95,19 @@
+ 
+ 
+ /**
+- * Create a group
++ * This method update the roster with information coming from
++ * message
++ * @param r: The roster to update
++ * @param list: A list of &quot;item&quot; message.
+  */
++void xmpp_im_roster_update_from_item_messages (XmppIM_Roster *r, Ecore_List * list);
++
++
++/**
++ * Create a group inside the roster
++ * @param groupname: The groupname to add
++ * @return the Newly created group
++ */
+ XmppIM_RosterGroup * xmpp_im_roster_group_new (char * groupname);
+ 
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000022.html">[Eim-svn] r26 - / src/egxp src/xmpp src/xmpp-im
+</A></li>
+	<LI>Next message: <A HREF="000024.html">[Eim-svn] r28 - / src/xmpp src/xmpp-im
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#23">[ date ]</a>
+              <a href="thread.html#23">[ thread ]</a>
+              <a href="subject.html#23">[ subject ]</a>
+              <a href="author.html#23">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

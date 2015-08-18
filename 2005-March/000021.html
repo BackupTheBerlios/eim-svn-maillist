@@ -1,0 +1,734 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r25 - / src src/gui src/xmpp src/xmpp-im
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-March/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r25%20-%20/%20src%20src/gui%20src/xmpp%20src/xmpp-im&In-Reply-To=%3C200503132133.j2DLXf4a012612%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000020.html">
+   <LINK REL="Next"  HREF="000022.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r25 - / src src/gui src/xmpp src/xmpp-im</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r25%20-%20/%20src%20src/gui%20src/xmpp%20src/xmpp-im&In-Reply-To=%3C200503132133.j2DLXf4a012612%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r25 - / src src/gui src/xmpp src/xmpp-im">jol at sheep.berlios.de
+       </A><BR>
+    <I>Sun Mar 13 22:33:41 CET 2005</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000020.html">[Eim-svn] r24 - / src src/gui
+</A></li>
+        <LI>Next message: <A HREF="000022.html">[Eim-svn] r26 - / src/egxp src/xmpp src/xmpp-im
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#21">[ date ]</a>
+              <a href="thread.html#21">[ thread ]</a>
+              <a href="subject.html#21">[ subject ]</a>
+              <a href="author.html#21">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-03-13 22:33:37 +0100 (Sun, 13 Mar 2005)
+New Revision: 25
+
+Added:
+   src/xmpp-im/xmpp_im.c
+   src/xmpp/xmpp_presence.c
+   src/xmpp/xmpp_presence.h
+Modified:
+   ChangeLog
+   Makefile.am
+   TODO
+   configure.ac
+   src/Makefile.am
+   src/eim.c
+   src/gui/Makefile.am
+   src/gui/gui_main.c
+   src/gui/gui_main.h
+   src/xmpp-im/Makefile.am
+   src/xmpp-im/xmpp_im.h
+   src/xmpp-im/xmpp_im_struct.h
+   src/xmpp/Makefile.am
+   src/xmpp/xmpp_opcode.c
+   src/xmpp/xmpp_opcode.h
+Log:
+- XmppIM protocole can be now registered/allocated/...
+- Add xmpp_presence file that provides function to send notification message.
+- Add some opcode support.
+- Some test around the gui.
+
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-03-03 21:02:19 UTC (rev 24)
++++ ChangeLog	2005-03-13 21:33:37 UTC (rev 25)
+@@ -1,3 +1,12 @@
++2005-03-13(jol):
++	- XmppIM protocole can be now registered/allocated/...
++	
++
++2005-03-06(jol):
++	- Add xmpp_presence file that provides function to send notification message.
++	- Add some opcode support.
++	- Some test around the gui.
++	
+ 2005-03-03(jol):
+ 	- Add a begin to the interface (only a transparent background with its container).
+ 	- Its just a first look at the evas and esmart api.
+
+Modified: Makefile.am
+===================================================================
+--- Makefile.am	2005-03-03 21:02:19 UTC (rev 24)
++++ Makefile.am	2005-03-13 21:33:37 UTC (rev 25)
+@@ -1,3 +1,2 @@
+ SUBDIRS=src doc
+ EXTRA_DIST=autogen.sh m4
+-
+
+Modified: TODO
+===================================================================
+--- TODO	2005-03-03 21:02:19 UTC (rev 24)
++++ TODO	2005-03-13 21:33:37 UTC (rev 25)
+@@ -1,8 +1,7 @@
+ HIGH URGENCY
+-- implement the xmpp_message_stream to give a connection example
+-- implement the xmpp_callback_stream_begin_cb to show how handle received data
++- Create the XmppIM structure in order to fill the roster.
++- Fill the roster !
+ 
+ LOW URGENCY
+ - Should change the egxp_message to handle integer tag instead of char * tag.
+ - Need some improvement in the egxp_message in order to limit the buffer copy ...
+-
+
+Modified: configure.ac
+===================================================================
+--- configure.ac	2005-03-03 21:02:19 UTC (rev 24)
++++ configure.ac	2005-03-13 21:33:37 UTC (rev 25)
+@@ -84,6 +84,16 @@
+ AC_SUBST(evas_libs)
+ AC_SUBST(evas_cflags)
+ 
++dnl Check for ewl
++AC_PATH_GENERIC(ewl, 0.0.4, [
++  AC_SUBST(ewl_libs)
++	AC_SUBST(ewl_cflags) ],
++	AC_MSG_ERROR(Cannot find ewl: Is ewl-config in path?))
++ewl_libs=`ewl-config --libs`
++ewl_cflags=`ewl-config --cflags`
++AC_SUBST(ewl_libs)
++AC_SUBST(ewl_cflags)
++
+ dnl Check for expat
+ EXPAT_INCLUDE=&quot;&quot;
+ EXPAT_LIB=&quot;-lexpat&quot;
+
+Modified: src/Makefile.am
+===================================================================
+--- src/Makefile.am	2005-03-03 21:02:19 UTC (rev 24)
++++ src/Makefile.am	2005-03-13 21:33:37 UTC (rev 25)
+@@ -11,9 +11,11 @@
+ 	eim.c
+ 
+ eim_CFLAGS = \
+-	$(ecore_cflags) $(IDN_CFLAGS) \
+-	-I$(top_srcdir)/src
++	-I$(top_srcdir)/src           \
++	$(ewl_cflags)                 \
++	$(ecore_cflags) $(IDN_CFLAGS)
+ 
++
+ eim_LDADD = \
+ 	-Legxp/ -legxp        \
+ 	-Lxmpp/ -lxmpp        \
+
+Modified: src/eim.c
+===================================================================
+--- src/eim.c	2005-03-03 21:02:19 UTC (rev 24)
++++ src/eim.c	2005-03-13 21:33:37 UTC (rev 25)
+@@ -19,9 +19,12 @@
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+ #include &lt;stdio.h&gt;
++#include &lt;stdlib.h&gt;
+ #include &lt;Ecore.h&gt;
+ #include &lt;Ecore_Con.h&gt;
+ 
++#include &lt;Ewl.h&gt;
++
+ #include &quot;gui/gui_main.h&quot;
+ 
+ 
+@@ -43,21 +46,61 @@
+ 
+ 
+ int main (int argc, char **argv) {
++  int          c = 0;
++  char         theme_file[PATH_MAX];
++  int          got_theme_file = FALSE;
++  struct stat  statbuf;
+   
++  /* parse the command line */
++  while ( (c = getopt (argc, argv, &quot;ht&quot;)) != -1) {
++    
++    switch (c) {
++    case 'h':
++      printf (&quot;Usage: %s [OPTION] ...\n\n&quot;, argv[0]);
++      printf (&quot;  -h        \t display this help and exit\n&quot;);
++      printf (&quot;  -t THEME  \t specify an edje theme file (.eet)\n&quot;);
++      
++      exit (-1);
++      break;
++    case 't':
++      got_theme_file = TRUE;
++      snprintf (theme_file, PATH_MAX, &quot;%s&quot;, (char *) argv[optind]);
++      break;
++    };
++  }
++  
++  
++  /* check if there is a valid theme file */
++  if (got_theme_file) {
++    stat (theme_file, &amp;statbuf);
++    if (!S_ISREG(statbuf.st_mode)) {
++      fprintf (stderr, &quot;error: themefile '%s' does not exist!\n&quot;, 
++	       theme_file);
++      exit (-1);
++    }
++  }
++  
++  
+   /* initialize the core */
+   ecore_init ();
++  if (!ewl_init(&amp;argc, argv)) {
++    printf(&quot;Unable to init ewl\n&quot;);
++    return -1;
++  }
++
+   ecore_event_handler_add (ECORE_EVENT_SIGNAL_EXIT, eim_handler_signal_exit, NULL);
+   if (!ecore_con_init ()) return -1;
+   
+   ecore_app_args_set (argc, (const char **) argv);
+ 
+-  if (gui_main_init (&quot;eim&quot;)) return -1;
++  if (gui_main_init2 (&quot;eim&quot;, theme_file)) return -1;
+   
+   /* process the main loop */
+   ecore_main_loop_begin ();
+ 
+ 
+   /* shutdown all ecore service */
++  ewl_shutdown ();
+   ecore_shutdown ();
+   
+   return 0;
+
+Modified: src/gui/Makefile.am
+===================================================================
+--- src/gui/Makefile.am	2005-03-03 21:02:19 UTC (rev 24)
++++ src/gui/Makefile.am	2005-03-13 21:33:37 UTC (rev 25)
+@@ -12,11 +12,13 @@
+ 	$(ecore_cflags)                     \
+ 	$(evas_cflags)                      \
+ 	$(esmart_cflags)                    \
++	$(ewl_cflags)                       \
+ 	$(IDN_CFLAGS) $(EXPAT_INCLUDE) 
+ 
+ libgui_la_LIBADD = \
+ 	$(ecore_libs)                         \
+ 	$(evas_libs)                          \
+ 	$(esmart_libs)  -lesmart_trans_x11 -lesmart_container   \
++	$(ewl_libs)                           \
+ 	$(IDN_LIBS)                           \
+ 	$(EXPAT_LIB)
+
+Modified: src/gui/gui_main.c
+===================================================================
+--- src/gui/gui_main.c	2005-03-03 21:02:19 UTC (rev 24)
++++ src/gui/gui_main.c	2005-03-13 21:33:37 UTC (rev 25)
+@@ -26,6 +26,8 @@
+ #include &lt;Esmart/Esmart_Container.h&gt;
+ #include &lt;Ecore_Evas.h&gt;
+ 
++#include &lt;Ewl.h&gt;
++
+ #include &quot;gui_main.h&quot;
+ 
+ 
+@@ -77,7 +79,7 @@
+ }
+ 
+ 
+-int gui_main_init (char * winname) {
++int gui_main_init (char * winname, char * theme) {
+ 
+   /* the X Window object */
+   Ecore_X_Window  win;
+@@ -139,3 +141,101 @@
+ 
+   return 0;
+ }
++
++
++
++/********************************************************************************************/
++/********************************************************************************************/
++/********************************************************************************************/
++/********************************************************************************************/
++void _gui_main_destroy_cb(Ewl_Widget *w, void *event, void *data) {
++    ewl_widget_destroy(w);
++    ewl_main_quit();
++}
++
++
++void item_cb(Ewl_Widget *w, void *event, void *data) {
++  Ewl_Widget * imenubox;
++  Ewl_Widget * item;
++  
++  /*  imenubox = ewl_vbox_new ();
++  ewl_object_fill_policy_set (EWL_OBJECT(imenubox), EWL_FLAG_FILL_FILL);
++  ewl_widget_show (imenubox);
++  */
++  imenubox = ewl_menu_new (&quot;&quot;, &quot;Test&quot;);
++  
++  
++  item = ewl_menu_item_new (&quot;&quot;, &quot;titi&quot;);
++  ewl_container_child_append (EWL_CONTAINER (imenubox), item);
++  ewl_widget_show (item);
++
++  // ewl_container_child_append (EWL_CONTAINER (w), imenubox);
++
++  //  ewl_widget_show (EWL_MENU(imenubox)-&gt;base.popup);
++
++
++  ewl_menu_configure_cb (imenubox, event, data);
++  ewl_menu_expand_cb (imenubox, event, data);
++  ewl_widget_show (imenubox);
++}
++
++
++int gui_main_init2 (char * winname, char * theme) {
++  Ewl_Widget     *main_win = NULL;
++  Ewl_Widget     *tree = NULL;
++  Ewl_Widget     *box = NULL;
++
++  Ewl_Widget     * item = NULL;
++  Ewl_Widget     * box_item = NULL;
++
++  /* create the main windows */
++  main_win = ewl_window_new();
++  /* define size */
++  ewl_object_size_request(EWL_OBJECT(main_win), 80, 300);
++  ewl_object_fill_policy_set(EWL_OBJECT(main_win), EWL_FLAG_FILL_ALL);
++  /* define title */
++  ewl_window_title_set(EWL_WINDOW(main_win),
++		       &quot;The Enlightenment Instant Messenger&quot;);
++  
++  ewl_callback_append(main_win, EWL_CALLBACK_DELETE_WINDOW, _gui_main_destroy_cb, NULL);
++  ewl_window_name_set(EWL_WINDOW(main_win), &quot;Enlightenment Instant Messenger&quot;);
++  ewl_window_class_set(EWL_WINDOW(main_win), &quot;Enlightenment Instant Messenger&quot;);
++  ewl_widget_show(main_win);
++
++
++  /* create the container */
++  box = ewl_vbox_new();
++  ewl_container_child_append(EWL_CONTAINER(main_win), box);
++  ewl_object_fill_policy_set(EWL_OBJECT(box), EWL_FLAG_FILL_ALL);
++  ewl_widget_show(box);
++  
++  
++  /* create the tree root object */
++  tree = ewl_tree_new (1); 
++  ewl_container_child_append (EWL_CONTAINER(box), tree);
++  ewl_widget_show(tree);
++
++  
++  /* add some test */
++  Ewl_Widget * hbox = ewl_hbox_new (); 
++  ewl_object_fill_policy_set(EWL_OBJECT(box), EWL_FLAG_FILL_ALL);
++  ewl_widget_show (hbox);
++  ewl_callback_append(hbox, EWL_CALLBACK_CLICKED, item_cb, NULL);
++  
++  
++  /* image */
++  Ewl_Widget *img = ewl_image_new(&quot;/usr/share/psi/iconsets/roster/default/online.png&quot;, NULL);
++  ewl_object_alignment_set(EWL_OBJECT(img), EWL_FLAG_ALIGN_LEFT);
++  ewl_object_fill_policy_set(EWL_OBJECT(img), EWL_FLAG_FILL_HSHRINK);
++  ewl_container_child_append (EWL_CONTAINER (hbox), img);
++  ewl_widget_show(img);
++  
++  /* text */
++  Ewl_Widget * text = ewl_text_new(&quot;text&quot;);
++  ewl_container_child_append (EWL_CONTAINER (hbox), text);
++  ewl_widget_show(text);
++  
++  ewl_tree_row_add (EWL_TREE(tree), NULL, &amp;hbox);
++  
++  return 0;
++}
+
+Modified: src/gui/gui_main.h
+===================================================================
+--- src/gui/gui_main.h	2005-03-03 21:02:19 UTC (rev 24)
++++ src/gui/gui_main.h	2005-03-13 21:33:37 UTC (rev 25)
+@@ -24,8 +24,11 @@
+ 
+ /**
+  * Initialize the GUI
++ * @param winname: The name for the window
++ * @param theme: The theme file.
+  * @return 0 on success
+  */
+-int gui_main_init (char * winname);
++int gui_main_init (char * winname, char * theme);
++int gui_main_init2 (char * winname, char * theme);
+ 
+ #endif
+
+Modified: src/xmpp/Makefile.am
+===================================================================
+--- src/xmpp/Makefile.am	2005-03-03 21:02:19 UTC (rev 24)
++++ src/xmpp/Makefile.am	2005-03-13 21:33:37 UTC (rev 25)
+@@ -19,7 +19,8 @@
+ 	xmpp_jid.h       \
+ 	xmpp_message.h   \
+ 	xmpp_auth.h      \
+-	sha1.h
++	sha1.h           \
++	xmpp_presence.h
+ 
+ libxmpp_la_SOURCES = \
+ 	xmpp_opcode.c    \
+@@ -28,6 +29,7 @@
+ 	xmpp_jid.c       \
+ 	xmpp_message.c   \
+ 	xmpp_auth.c      \
+-	sha1.c
++	sha1.c           \
++	xmpp_presence.c
+ 
+ libxmpp_la_CFLAGS = $(ecore_cflags) $(IDN_CFLAGS) $(EXPAT_INCLUDE) -I$(top_srcdir)/src
+
+Modified: src/xmpp/xmpp_opcode.c
+===================================================================
+--- src/xmpp/xmpp_opcode.c	2005-03-03 21:02:19 UTC (rev 24)
++++ src/xmpp/xmpp_opcode.c	2005-03-13 21:33:37 UTC (rev 25)
+@@ -66,10 +66,21 @@
+   egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_IQ_AUTH_1);
+   egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_IQ_AUTH_2);
+ 
+-  // egxp_opcode_add (eg-&gt;opcodes, );
+   
++  /* define presence tag &amp; value */
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_TAG_PRESENCE);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_TAG_PRESENCE_STATUS);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_TAG_PRESENCE_PRIORITY);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_TAG_PRESENCE_SHOW);
+   
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_PRESENCE_SHOW_AWAY);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_PRESENCE_SHOW_CHAT);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_PRESENCE_SHOW_DND);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_PRESENCE_SHOW_XA);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_PRESENCE_SHOW_ONLINE);
++  
+ 
++
+   /********************/
+   /********************/
+   /*  Protocol Init   */
+
+Modified: src/xmpp/xmpp_opcode.h
+===================================================================
+--- src/xmpp/xmpp_opcode.h	2005-03-03 21:02:19 UTC (rev 24)
++++ src/xmpp/xmpp_opcode.h	2005-03-13 21:33:37 UTC (rev 25)
+@@ -62,6 +62,22 @@
+ 
+ 
+ /**
++ * Define presence opcode.
++ */
++#define XMPP_TAG_PRESENCE               &quot;presence&quot;
++#define XMPP_TAG_PRESENCE_STATUS        &quot;status&quot;
++#define XMPP_TAG_PRESENCE_PRIORITY      &quot;priority&quot;
++#define XMPP_TAG_PRESENCE_SHOW          &quot;show&quot;
++
++#define XMPP_VALUE_PRESENCE_SHOW_AWAY   &quot;away&quot;
++#define XMPP_VALUE_PRESENCE_SHOW_CHAT   &quot;chat&quot;
++#define XMPP_VALUE_PRESENCE_SHOW_DND    &quot;dnd&quot;
++#define XMPP_VALUE_PRESENCE_SHOW_XA     &quot;xa&quot;
++#define XMPP_VALUE_PRESENCE_SHOW_ONLINE &quot;online&quot;
++
++
++
++/**
+  * Add the xmpp opcode inside the opcode variable
+  * @param opcode: use to store xmpp opcode
+  */
+
+Added: src/xmpp/xmpp_presence.c
+===================================================================
+--- src/xmpp/xmpp_presence.c	2005-03-03 21:02:19 UTC (rev 24)
++++ src/xmpp/xmpp_presence.c	2005-03-13 21:33:37 UTC (rev 25)
+@@ -0,0 +1,32 @@
++#include &lt;assert.h&gt;
++#include &lt;string.h&gt;
++
++#include &quot;egxp/egxp.h&quot;
++#include &quot;xmpp_opcode.h&quot;
++#include &quot;xmpp_presence.h&quot;
++
++int xmpp_presence_send (Xmpp *x, int show) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_presence_send\n&quot;);
++#endif
++
++  assert (x);
++
++  /* create a presence message */
++  Egxp_Message * message = egxp_message_new (XMPP_TAG_PRESENCE);
++  
++  /* create show tag */
++  Egxp_Message * show_msg = egxp_message_new (XMPP_TAG_PRESENCE_SHOW);
++  Egxp_Opcode * opcodes = EGXP_EXTENSION (x)-&gt;parent-&gt;opcodes;
++  assert (opcodes);
++  /* append the show value */
++  char * data = egxp_opcode_get_string (opcodes,show);
++  egxp_message_append_data (show_msg, data, strlen (data));
++  egxp_message_add_child (message, show_msg);
++
++  /* send the message */
++  Egxp_Connection * conn = EGXP_EXTENSION(x)-&gt;parent-&gt;connection;
++  egxp_connection_send_message (conn, message, 1);
++  
++  return 1;
++}
+
+Added: src/xmpp/xmpp_presence.h
+===================================================================
+--- src/xmpp/xmpp_presence.h	2005-03-03 21:02:19 UTC (rev 24)
++++ src/xmpp/xmpp_presence.h	2005-03-13 21:33:37 UTC (rev 25)
+@@ -0,0 +1,17 @@
++#ifndef xmpp_presence_header
++#define xmpp_presence_header
++
++#include &quot;xmpp_struct.h&quot;
++
++
++/**
++ * This method try to send a presence message with the show 
++ * information
++ * @param x: The xmpp
++ * @param show: The show value.
++ */
++int xmpp_presence_send (Xmpp *x, int show);
++
++
++
++#endif
+
+Modified: src/xmpp-im/Makefile.am
+===================================================================
+--- src/xmpp-im/Makefile.am	2005-03-03 21:02:19 UTC (rev 24)
++++ src/xmpp-im/Makefile.am	2005-03-13 21:33:37 UTC (rev 25)
+@@ -21,6 +21,7 @@
+ 
+ libxmppim_la_SOURCES = \
+ 	xmpp_im_contact.c  \
+-	xmpp_im_roster.c
++	xmpp_im_roster.c   \
++	xmpp_im.c
+ 
+ libxmppim_la_CFLAGS = $(ecore_cflags) $(IDN_CFLAGS) $(EXPAT_INCLUDE) -I$(top_srcdir)/src
+
+Added: src/xmpp-im/xmpp_im.c
+===================================================================
+--- src/xmpp-im/xmpp_im.c	2005-03-03 21:02:19 UTC (rev 24)
++++ src/xmpp-im/xmpp_im.c	2005-03-13 21:33:37 UTC (rev 25)
+@@ -0,0 +1,75 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++#include &lt;assert.h&gt;
++#include &quot;xmpp_im.h&quot;
++
++
++
++XmppIM * xmpp_im_register (Egxp *eg) {
++#ifdef XMPPIM_DEBUG
++  printf(&quot;TRACE: xmpp_im_register\n&quot;);
++#endif
++  assert (eg);
++
++  /* register xmpp_im opcode */
++  
++  /* add the xmppim_register */
++  int id = egxp_opcode_add (eg-&gt;opcodes, XMPPIM_REGISTER);
++  XmppIM * tmp = xmpp_im_new (eg);
++  
++  /* register the xmpp_im protocole */
++  egxp_extension_register (eg, id, tmp);
++  
++  return tmp;
++}
++
++
++XmppIM * xmpp_im_new (Egxp * eg) {
++#ifdef XMPPIM_DEBUG
++  printf(&quot;TRACE: xmpp_im_new\n&quot;);
++#endif
++  assert (eg);
++
++  /* allocate the structure */
++  XmppIM * tmp = XMPPIM (malloc(sizeof (XmppIM)));
++  
++  /* define the destroy function */
++  tmp-&gt;extension.destroy = ECORE_FREE_CB(xmpp_im_free);
++  
++  /* allocate the roster */
++  tmp-&gt;roster = xmpp_im_roster_new ();
++  
++  /* return the structure */
++  return tmp;
++}
++
++
++void xmpp_im_free (XmppIM * x) {
++#ifdef XMPPIM_DEBUG
++  printf(&quot;TRACE: xmpp_im_free\n&quot;);
++#endif
++  assert (x);
++ 
++  /* deallocate the roster */
++  if (x-&gt;roster) xmpp_im_roster_free (x-&gt;roster);
++  
++  FREE (x);
++}
+
+Modified: src/xmpp-im/xmpp_im.h
+===================================================================
+--- src/xmpp-im/xmpp_im.h	2005-03-03 21:02:19 UTC (rev 24)
++++ src/xmpp-im/xmpp_im.h	2005-03-13 21:33:37 UTC (rev 25)
+@@ -5,4 +5,29 @@
+ #include &quot;xmpp_im_contact.h&quot;
+ #include &quot;xmpp_im_roster.h&quot;
+ 
++
++#define XMPPIM_REGISTER &quot;__XMPPIM_REGISTER__&quot;
++
++
++/**
++ * Should register the xmpp_im extension
++ * @param eg: The egxp structure
++ * @return the XmppIM register
++ */
++XmppIM * xmpp_im_register (Egxp *eg);
++
++
++/**
++ * Create the xmpp structure
++ */
++XmppIM * xmpp_im_new (Egxp * eg);
++
++
++/**
++ * free the memory used by the XmppIM structure
++ */
++void xmpp_im_free (XmppIM * x);
++
++
++
+ #endif
+
+Modified: src/xmpp-im/xmpp_im_struct.h
+===================================================================
+--- src/xmpp-im/xmpp_im_struct.h	2005-03-03 21:02:19 UTC (rev 24)
++++ src/xmpp-im/xmpp_im_struct.h	2005-03-13 21:33:37 UTC (rev 25)
+@@ -23,8 +23,15 @@
+ 
+ #include &lt;Ecore_Data.h&gt;
+ 
++#include &quot;egxp/egxp.h&quot;
+ #include &quot;xmpp/xmpp_jid.h&quot;
+ 
++
++/**
++ * This structure defines what is a contact. A contact is associated 
++ * to a jid and a list of group. A contact can be in several groups.
++ * The name field is the pseudo of the contact.
++ */
+ typedef struct _XmppIM_Contact XmppIM_Contact;
+ #define XMPPIM_CONTACT(o) ((XmppIM_Contact*)o)
+ struct _XmppIM_Contact {
+@@ -74,4 +81,21 @@
+ };
+ 
+ 
++
++/**
++ * This structure contains all variable associated to 
++ * the xmpp-im extension.
++ */
++typedef struct _XmppIM XmppIM;
++#define XMPPIM(o) ((XmppIM*)o)
++struct _XmppIM {
++  /* This variable is really important, it's used to destroy itself */
++  Egxp_Extension extension;
++
++  /* the roster */
++  XmppIM_Roster * roster;
++  
++  
++};
++
+ #endif
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000020.html">[Eim-svn] r24 - / src src/gui
+</A></li>
+	<LI>Next message: <A HREF="000022.html">[Eim-svn] r26 - / src/egxp src/xmpp src/xmpp-im
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#21">[ date ]</a>
+              <a href="thread.html#21">[ thread ]</a>
+              <a href="subject.html#21">[ subject ]</a>
+              <a href="author.html#21">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,494 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r30 - / src src/egxp src/gui src/xmpp src/xmpp-im
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-April/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r30%20-%20/%20src%20src/egxp%20src/gui%20src/xmpp%20src/xmpp-im&In-Reply-To=%3C200503312229.j2VMTPhd016025%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000027.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r30 - / src src/egxp src/gui src/xmpp src/xmpp-im</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r30%20-%20/%20src%20src/egxp%20src/gui%20src/xmpp%20src/xmpp-im&In-Reply-To=%3C200503312229.j2VMTPhd016025%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r30 - / src src/egxp src/gui src/xmpp src/xmpp-im">jol at sheep.berlios.de
+       </A><BR>
+    <I>Fri Apr  1 00:29:25 CEST 2005</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000027.html">[Eim-svn] r31 - / data data/themes data/themes/default data/themes/default/img data/themes/default/macros data/themes/default/parts data/themes/default/programs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#26">[ date ]</a>
+              <a href="thread.html#26">[ thread ]</a>
+              <a href="subject.html#26">[ subject ]</a>
+              <a href="author.html#26">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-04-01 00:29:22 +0200 (Fri, 01 Apr 2005)
+New Revision: 30
+
+Modified:
+   /
+   ChangeLog
+   TODO
+   src/
+   src/egxp/
+   src/egxp/egxp_message.c
+   src/gui/
+   src/xmpp-im/
+   src/xmpp-im/test.c
+   src/xmpp-im/xmpp_im.c
+   src/xmpp-im/xmpp_im.h
+   src/xmpp-im/xmpp_im_callback.c
+   src/xmpp-im/xmpp_im_callback.h
+   src/xmpp-im/xmpp_im_contact.c
+   src/xmpp-im/xmpp_im_contact.h
+   src/xmpp-im/xmpp_im_opcode.c
+   src/xmpp-im/xmpp_im_opcode.h
+   src/xmpp-im/xmpp_im_roster.c
+   src/xmpp-im/xmpp_im_roster.h
+   src/xmpp-im/xmpp_im_struct.h
+   src/xmpp/
+   src/xmpp/sha1.c
+   src/xmpp/sha1.h
+   src/xmpp/xmpp_jid.h
+   src/xmpp/xmpp_presence.c
+   src/xmpp/xmpp_presence.h
+Log:
+- Fix a dirty bug inside the get_data of the egxp_message
+- Fix a bug in the roster, in fact, all contacts were referenced
+  name instead of their jid.
+- It seems to have no memory leak
+
+
+
+
+Property changes on: 
+___________________________________________________________________
+Name: svn:ignore
+   - configure
+Makefile.in
+config.log
+depcomp
+compile
+config.guess
+config.h
+ltmain.sh
+config.sub
+Makefile
+config.status
+stamp-h1
+config.h.in
+libtool
+autom4te.cache
+missing
+aclocal.m4
+install-sh
+
+   + configure
+Makefile.in
+config.log
+depcomp
+compile
+config.guess
+config.h
+ltmain.sh
+config.sub
+Makefile
+config.status
+stamp-h1
+config.h.in
+libtool
+autom4te.cache
+missing
+aclocal.m4
+install-sh
+eim.kdevelop
+Doxyfile
+html
+eim.kdevelop.pcs
+latex
+eim.kdevses
+eim.tag
+xml
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-03-30 21:42:22 UTC (rev 29)
++++ ChangeLog	2005-03-31 22:29:22 UTC (rev 30)
+@@ -1,3 +1,9 @@
++2005-03/31(jol):
++	- Fix a dirty bug inside the get_data of the egxp_message
++	- Fix a bug in the roster, in fact, all contacts were referenced by their
++	  name instead of their jid.
++	- It seems to have no memory leak
++	
+ 2005-03-30(jol):
+ 	- fix a bug in the xmpp_jid code,
+ 	- the bug hunting progress ...
+
+Modified: TODO
+===================================================================
+--- TODO	2005-03-30 21:42:22 UTC (rev 29)
++++ TODO	2005-03-31 22:29:22 UTC (rev 30)
+@@ -1,9 +1,7 @@
+ HIGH URGENCY
+ - Add a function to display the protocol define by egxp, it will help to debug.
+-- Create the XmppIM structure in order to fill the roster.
+-- Fill the roster !
+ 
+ 
+ LOW URGENCY
+ - Should change the egxp_message to handle integer tag instead of char * tag.
+-- Need some improvement in the egxp_message in order to limit the buffer copy ...
++- Need some improvement in the egxp_message in order to limit buffer copy ...
+
+
+Property changes on: src
+___________________________________________________________________
+Name: svn:ignore
+   - Makefile.in
+Makefile
+
+   + Makefile.in
+Makefile
+stamp-h1
+config.h
+config.h.in
+.libs
+.deps
+eim
+
+
+
+Property changes on: src/egxp
+___________________________________________________________________
+Name: svn:ignore
+   - Makefile.in
+Makefile
+.libs
+.deps
+test
+
+   + Makefile.in
+Makefile
+.libs
+.deps
+test
+.*
+
+
+Modified: src/egxp/egxp_message.c
+===================================================================
+--- src/egxp/egxp_message.c	2005-03-30 21:42:22 UTC (rev 29)
++++ src/egxp/egxp_message.c	2005-03-31 22:29:22 UTC (rev 30)
+@@ -217,7 +217,8 @@
+   
+   char * buf = (char*) malloc ((m-&gt;data_size + 1) * sizeof (char));
+   strncpy (buf, m-&gt;data, m-&gt;data_size);
+-  
++  buf[m-&gt;data_size] = '\0';
++
+   return buf;
+ }
+ 
+
+
+Property changes on: src/gui
+___________________________________________________________________
+Name: svn:ignore
+   + .*
+Makefile
+Makefile.in
+
+
+
+Property changes on: src/xmpp
+___________________________________________________________________
+Name: svn:ignore
+   - Makefile.in
+Makefile
+.libs
+.deps
+test
+
+   + Makefile.in
+Makefile
+.libs
+.deps
+test
+.*
+
+
+
+Property changes on: src/xmpp/sha1.c
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp/sha1.h
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+Modified: src/xmpp/xmpp_jid.h
+===================================================================
+--- src/xmpp/xmpp_jid.h	2005-03-30 21:42:22 UTC (rev 29)
++++ src/xmpp/xmpp_jid.h	2005-03-31 22:29:22 UTC (rev 30)
+@@ -61,7 +61,7 @@
+  * @param jid: The jid used to get the bar jid
+  * @return the jid bare, you should free the memory
+  */
+-char * xmpp_jid_get_bare (Xmpp_JID * jid);
++char * xmpp_jid_get_bar (Xmpp_JID * jid);
+ 
+ 
+ /**
+
+
+Property changes on: src/xmpp/xmpp_presence.c
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp/xmpp_presence.h
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im
+___________________________________________________________________
+Name: svn:ignore
+   + Makefile.in
+Makefile
+log.*
+.*
+test
+
+
+
+Property changes on: src/xmpp-im/test.c
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im/xmpp_im.c
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im/xmpp_im.h
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im/xmpp_im_callback.c
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im/xmpp_im_callback.h
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+Modified: src/xmpp-im/xmpp_im_contact.c
+===================================================================
+--- src/xmpp-im/xmpp_im_contact.c	2005-03-30 21:42:22 UTC (rev 29)
++++ src/xmpp-im/xmpp_im_contact.c	2005-03-31 22:29:22 UTC (rev 30)
+@@ -27,9 +27,16 @@
+ #include &quot;xmpp_im_roster.h&quot;
+ #include &quot;xmpp_im_contact.h&quot;
+ 
++
++/* use for debug */
++static int _contact_num = 0;
++
++
++
+ XmppIM_Contact * xmpp_im_contact_new (Xmpp_JID * jid, char * name) {
+ #ifdef XMPPIM_DEBUG
+-  printf(&quot;TRACE:xmpp_im_contact_new\n&quot;);
++  _contact_num += 1;
++  printf(&quot;TRACE:xmpp_im_contact_new %d - %s\n&quot;, _contact_num, name);
+ #endif
+   assert (jid);
+ 
+@@ -47,10 +54,11 @@
+ 
+ 
+ void xmpp_im_contact_free (XmppIM_Contact * contact) {
++  assert( contact != NULL);
+ #ifdef XMPPIM_DEBUG
+-  printf(&quot;TRACE:xmpp_im_contact_free\n&quot;);
++  _contact_num -=1;
++  printf(&quot;TRACE:xmpp_im_contact_free: %d - %s\n&quot;, _contact_num, contact-&gt;name);
+ #endif
+-  assert( contact != NULL);
+ 
+   /* unregister the contact from his group list */
+   xmpp_im_contact_remove_all_group (contact);
+
+
+Property changes on: src/xmpp-im/xmpp_im_contact.c
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im/xmpp_im_contact.h
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im/xmpp_im_opcode.c
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im/xmpp_im_opcode.h
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+Modified: src/xmpp-im/xmpp_im_roster.c
+===================================================================
+--- src/xmpp-im/xmpp_im_roster.c	2005-03-30 21:42:22 UTC (rev 29)
++++ src/xmpp-im/xmpp_im_roster.c	2005-03-31 22:29:22 UTC (rev 30)
+@@ -21,6 +21,9 @@
+ #include &lt;assert.h&gt;
+ #include &lt;stdlib.h&gt;
+ #include &lt;string.h&gt;
++
++#include &quot;xmpp/xmpp_jid.h&quot;
++
+ #include &quot;xmpp_im_contact.h&quot;
+ #include &quot;xmpp_im_roster.h&quot;
+ 
+@@ -44,6 +47,8 @@
+ 			       ecore_str_compare);
+   ecore_hash_set_free_value (tmp-&gt;users, 
+ 			     (Ecore_Free_Cb)xmpp_im_contact_free);
++  ecore_hash_set_free_key (tmp-&gt;users,
++			   (Ecore_Free_Cb) free);
+   
+   return tmp;
+ }
+@@ -87,7 +92,11 @@
+ 
+   assert (r != NULL &amp;&amp; r-&gt;users != NULL &amp;&amp; c != NULL);
+   
+-  ecore_hash_set (r-&gt;users, c-&gt;name, c);
++  /**
++   * We add the contact using it's jid.
++   * The jid must be deleted when the contact is removed
++   */
++  ecore_hash_set (r-&gt;users, xmpp_jid_get_bar (c-&gt;jid), c);
+ }
+ 
+ 
+@@ -102,8 +111,12 @@
+   xmpp_im_contact_remove_all_group (c);
+   
+   /* remove the contact from the user hash */
+-  XmppIM_Contact * tmp = XMPPIM_CONTACT (ecore_hash_remove (r-&gt;users, c-&gt;name));
++  char * jid = xmpp_jid_get_bar (c-&gt;jid);
++  XmppIM_Contact * tmp = XMPPIM_CONTACT (ecore_hash_remove (r-&gt;users, jid));
++  FREE (jid);
+   
++  
++
+   assert (tmp == c);
+ }
+ 
+@@ -149,9 +162,16 @@
+ 
+ 
+ 
++
++/* use to debug */
++static int _roster_group_num = 0;
++
++
++
+ XmppIM_RosterGroup * xmpp_im_roster_group_new (char * groupname) {
+ #ifdef XMPPIM_DEBUG
+-  printf(&quot;TRACE: xmpp_im_roster_group_new\n&quot;);
++  _roster_group_num += 1;
++  printf(&quot;TRACE: xmpp_im_roster_group_new: %d\n&quot;, _roster_group_num);
+ #endif
+   
+   XmppIM_RosterGroup * tmp = XMPPIM_ROSTERGROUP(malloc (sizeof (XmppIM_RosterGroup)));
+@@ -167,7 +187,8 @@
+ 
+ void xmpp_im_roster_group_free (XmppIM_RosterGroup * r) {
+ #ifdef XMPPIM_DEBUG
+-  printf(&quot;TRACE: xmpp_im_roster_group_free\n&quot;);
++  _roster_group_num -= 1;
++  printf(&quot;TRACE: xmpp_im_roster_group_free: %d\n&quot;, _roster_group_num);
+ #endif
+ 
+   /* free the group name */
+
+
+Property changes on: src/xmpp-im/xmpp_im_roster.c
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im/xmpp_im_roster.h
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+Property changes on: src/xmpp-im/xmpp_im_struct.h
+___________________________________________________________________
+Name: svn:keywords
+   + Id
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000027.html">[Eim-svn] r31 - / data data/themes data/themes/default data/themes/default/img data/themes/default/macros data/themes/default/parts data/themes/default/programs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#26">[ date ]</a>
+              <a href="thread.html#26">[ thread ]</a>
+              <a href="subject.html#26">[ subject ]</a>
+              <a href="author.html#26">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

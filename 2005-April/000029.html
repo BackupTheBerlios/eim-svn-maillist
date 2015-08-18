@@ -1,0 +1,368 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r33 - / src src/egxp src/gui src/xmpp src/xmpp-im
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-April/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r33%20-%20/%20src%20src/egxp%20src/gui%20src/xmpp%20src/xmpp-im&In-Reply-To=%3C200504201242.j3KCgejT003592%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000028.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r33 - / src src/egxp src/gui src/xmpp src/xmpp-im</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r33%20-%20/%20src%20src/egxp%20src/gui%20src/xmpp%20src/xmpp-im&In-Reply-To=%3C200504201242.j3KCgejT003592%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r33 - / src src/egxp src/gui src/xmpp src/xmpp-im">jol at sheep.berlios.de
+       </A><BR>
+    <I>Wed Apr 20 14:42:40 CEST 2005</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000028.html">[Eim-svn] r32 - / data/themes/default data/themes/default/img data/themes/default/macros data/themes/default/parts data/themes/default/programs
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#29">[ date ]</a>
+              <a href="thread.html#29">[ thread ]</a>
+              <a href="subject.html#29">[ subject ]</a>
+              <a href="author.html#29">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-04-20 14:42:36 +0200 (Wed, 20 Apr 2005)
+New Revision: 33
+
+Added:
+   SConstruct
+   src/SConscript
+   src/egxp/SConscript
+   src/gui/SConscript
+   src/xmpp-im/SConscript
+   src/xmpp/SConscript
+Modified:
+   ChangeLog
+Log:
+- Add a scons support (not finished)
+
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-04-14 22:10:51 UTC (rev 32)
++++ ChangeLog	2005-04-20 12:42:36 UTC (rev 33)
+@@ -1,3 +1,6 @@
++2005-04-20(jol):
++	- Add a scons support (not finished)
++
+ 2005-04-14(jol):
+ 	- Currently, i learn edje in order to create the eim graphical
+ 	  interface with it. Edje is really great and really powerful even 
+
+Added: SConstruct
+===================================================================
+--- SConstruct	2005-04-14 22:10:51 UTC (rev 32)
++++ SConstruct	2005-04-20 12:42:36 UTC (rev 33)
+@@ -0,0 +1,141 @@
++import os
++import SCons
++import errno
++
++SConsignFile()
++EnsureSConsVersion(0, 96)
++
++#eim version
++version = '0.0.1a'
++
++# Define options
++opts = Options('scache.conf')
++opts.AddOptions (
++    BoolOption('debug', 'Compile a debug version', 1),
++    PathOption('prefix', 'Set the install &quot;prefix&quot;', '/usr/local')
++    )
++
++#Define the environments
++env = Environment (options = opts,
++                   VERSION = version,
++                   TARBALL='eim-' + version + '.tar.bz2',
++                   DISTFILES = [],
++                   DISTTREE = '#eim-' + version,
++                   DISTCHECKDIR = '#eim-' + version + '/check'
++                   )
++
++#Save option and generate Help
++opts.Save ('options.cache', env)
++Help (opts.GenerateHelpText(env))
++
++
++#
++# source tar file builder
++#
++
++def distcopy (target, source, env):
++    treedir = str (target[0])
++
++    try:
++        os.mkdir (treedir)
++    except OSError, (errnum, strerror):
++        if errnum != errno.EEXIST:
++            print 'mkdir ', treedir, ':', strerror
++
++    cmd = 'tar cf - '
++    #
++    # we don't know what characters might be in the file names
++    # so quote them all before passing them to the shell
++    #
++    all_files = ([ str(s) for s in source ])
++    cmd += &quot; &quot;.join ([ &quot;'%s'&quot; % quoted for quoted in all_files])
++    cmd += ' | (cd ' + treedir + ' &amp;&amp; tar xf -)'
++    p = os.popen (cmd)
++    return p.close ();
++
++def tarballer (target, source, env):            
++    cmd = 'tar -jcf ' + str (target[0]) +  ' ' + str(source[0]) + &quot;  --exclude '*~'&quot;
++    print 'running ', cmd, ' ... '
++    p = os.popen (cmd)
++    ret = p.close ()
++    return ret
++
++dist_bld = Builder (action = distcopy,
++                    target_factory = SCons.Node.FS.default_fs.Entry,
++                    source_factory = SCons.Node.FS.default_fs.Entry,
++                    multi = 1)
++
++tarball_bld = Builder (action = tarballer,
++                       target_factory = SCons.Node.FS.default_fs.Entry,
++                       source_factory = SCons.Node.FS.default_fs.Entry)
++
++env.Append (BUILDERS = {'Distribute' : dist_bld})
++env.Append (BUILDERS = {'Tarball' : tarball_bld})
++
++
++# source tarball
++Precious (env['DISTTREE'])
++env.Distribute (env['DISTTREE'],
++                ['SConstruct', 'AUTHORS' , 'COPYING' ,
++                 'ChangeLog' , 'INSTALL' , 'NEWS', 'README',
++                 'TODO'])
++srcdist = env.Tarball(env['TARBALL'], env['DISTTREE'])
++env.Alias ('dist', srcdist)
++
++
++#
++# don't leave the distree around 
++#
++env.AddPreAction (env['DISTTREE'], Action ('rm -rf ' + str (File (env['DISTTREE']))))
++#env.AddPostAction (srcdist, Action ('rm -rf ' + str (File (env['DISTTREE']))))
++
++
++
++# Configure
++conf = Configure(env)
++
++#Update CFLAGS in function of the options
++if env['debug']:
++    conf.env.Append (CCFLAGS = '-g3')
++else:
++    conf.env.Append (CCFLAGS = '-O3')
++conf.env.Append (CCFLAGS='-Wall')
++
++#
++#- Add the config command to the environment
++#- Generate an error if the command is not available
++#
++def checkConfig (config, env):
++    cf = env.WhereIs (config)
++    if cf == None or cf == &quot;&quot;:
++        print &quot;Impossible to find&quot;, config
++        Exit (1)
++    env.ParseConfig(config + ' --cflags --libs')
++
++
++#Check ecore-config
++checkConfig ('ecore-config', conf.env)
++checkConfig ('ewl-config', conf.env)
++checkConfig ('edje-config', conf.env)
++checkConfig ('esmart-config', conf.env)
++
++#Check for Expat
++if not conf.CheckLib('expat'):
++    print 'Did not find the expat library, exiting!'
++    Exit(1)
++
++#Add source directoy
++conf.env.Append (CPPPATH='#src/')
++    
++env = conf.Finish ()
++
++#Define bin, include, library directory
++install_inc = os.path.join (env['prefix'], 'include/eim')
++install_bin = os.path.join (env['prefix'], 'bin')
++install_lib = os.path.join (env['prefix'], 'lib')
++env.Alias ('install', [install_inc, install_bin, install_lib])
++
++
++Export ('env install_inc install_bin install_lib')
++for subdir in ['src']:
++    SConscript ('%s/SConscript' % subdir)
+
+Added: src/SConscript
+===================================================================
+--- src/SConscript	2005-04-14 22:10:51 UTC (rev 32)
++++ src/SConscript	2005-04-20 12:42:36 UTC (rev 33)
+@@ -0,0 +1,15 @@
++Import ('env install_inc install_bin install_lib')
++Export ('env install_inc install_bin install_lib')
++
++files = ['eim.c']
++
++eim = env.Program ('eim.c',
++                   LIBPATH=['#src/egxp', '#src/xmpp', '#src/xmpp-im', '#src/gui'],
++                   LIBS=['egxp', 'xmpp', 'xmppim', 'gui'])
++
++env.Alias('tarball', env.Distribute (env['DISTTREE'],
++                                     files + ['SConscript']))
++
++for subdir in ['egxp', 'xmpp', 'xmpp-im', 'gui']:
++    SConscript ('%s/SConscript' % subdir)
++    
+
+Added: src/egxp/SConscript
+===================================================================
+--- src/egxp/SConscript	2005-04-14 22:10:51 UTC (rev 32)
++++ src/egxp/SConscript	2005-04-20 12:42:36 UTC (rev 33)
+@@ -0,0 +1,25 @@
++import os
++Import ('env install_inc install_bin install_lib')
++
++files = ['egxp.c','egxp_condition.c',
++         'egxp_connection.c', 'egxp_message.c',
++         'egxp_node.c', 'egxp_opcode.c',
++         'egxp_protocol_handler.c']
++
++headers = ['egxp.h','egxp_condition.h',
++           'egxp_connection.h', 'egxp_message.h',
++           'egxp_node.h', 'egxp_opcode.h',
++           'egxp_protocol_handler.h',
++           'egxp_node_struct.h']
++
++libegxp = env.SharedLibrary('egxp', files)
++
++
++test = env.Program ('test.c', LIBPATH='./', LIBS='egxp')
++
++
++env.Alias('tarball', env.Distribute (env['DISTTREE'],
++                                     files + headers + ['test.c','SConscript']))
++
++env.Install (os.path.join (install_inc, &quot;egxp&quot;), headers)
++env.Install (install_lib, libegxp)
+
+Added: src/gui/SConscript
+===================================================================
+--- src/gui/SConscript	2005-04-14 22:10:51 UTC (rev 32)
++++ src/gui/SConscript	2005-04-20 12:42:36 UTC (rev 33)
+@@ -0,0 +1,12 @@
++import os
++
++Import ('env install_inc install_bin install_lib')
++files = ['gui_main.c']
++headers = ['gui_main.h']
++
++libgui = env.SharedLibrary('gui', files)
++
++env.Alias('tarball', env.Distribute (env['DISTTREE'],
++                                     files + headers + ['SConscript']))
++env.Install (os.path.join (install_inc, &quot;gui&quot;), headers)
++env.Install (install_lib, libgui)
+
+Added: src/xmpp/SConscript
+===================================================================
+--- src/xmpp/SConscript	2005-04-14 22:10:51 UTC (rev 32)
++++ src/xmpp/SConscript	2005-04-20 12:42:36 UTC (rev 33)
+@@ -0,0 +1,26 @@
++import os
++
++Import ('env install_inc install_bin install_lib')
++files = ['sha1.c', 'xmpp.c',
++         'xmpp_auth.c', 'xmpp_callback.c',
++         'xmpp_jid.c', 'xmpp_message.c',
++         'xmpp_opcode.c', 'xmpp_presence.c'
++         ]
++
++headers = ['sha1.h', 'xmpp.h',
++           'xmpp_auth.h', 'xmpp_callback.h',
++           'xmpp_jid.h', 'xmpp_message.h',
++           'xmpp_opcode.h', 'xmpp_presence.h'
++           ]
++
++libxmpp = env.SharedLibrary('xmpp', files)
++
++test = env.Program ('test.c',
++                    LIBPATH=['./', '#src/egxp'],
++                    LIBS=['egxp', 'xmpp']) 
++
++env.Alias('tarball', env.Distribute (env['DISTTREE'],
++                                     files + headers + ['test.c','SConscript']))
++
++env.Install (os.path.join (install_inc, &quot;xmpp&quot;), headers)
++env.Install (install_lib, libxmpp)
+
+Added: src/xmpp-im/SConscript
+===================================================================
+--- src/xmpp-im/SConscript	2005-04-14 22:10:51 UTC (rev 32)
++++ src/xmpp-im/SConscript	2005-04-20 12:42:36 UTC (rev 33)
+@@ -0,0 +1,24 @@
++import os
++
++Import ('env install_inc install_bin install_lib')
++files = ['xmpp_im.c', 'xmpp_im_callback.c',
++         'xmpp_im_contact.c', 'xmpp_im_opcode.c',
++         'xmpp_im_roster.c'
++         ]
++
++headers = ['xmpp_im.h', 'xmpp_im_callback.h',
++           'xmpp_im_contact.h', 'xmpp_im_opcode.h',
++           'xmpp_im_roster.h'
++           ]
++
++libxmppim = env.SharedLibrary('xmppim', files)
++
++test = env.Program ('test.c',
++                    LIBPATH=['./', '#src/egxp', '#src/xmpp'],
++                    LIBS=['egxp', 'xmpp', 'xmppim']) 
++
++env.Alias('tarball', env.Distribute (env['DISTTREE'],
++                                     files + headers + ['test.c','SConscript']))
++env.Install (os.path.join (install_inc, &quot;xmpp-im&quot;), headers)
++env.Install (install_lib, libxmppim)
++
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000028.html">[Eim-svn] r32 - / data/themes/default data/themes/default/img data/themes/default/macros data/themes/default/parts data/themes/default/programs
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#29">[ date ]</a>
+              <a href="thread.html#29">[ thread ]</a>
+              <a href="subject.html#29">[ subject ]</a>
+              <a href="author.html#29">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

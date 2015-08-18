@@ -1,0 +1,650 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r8 - / src/egxp
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-February/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r8%20-%20/%20src/egxp&In-Reply-To=%3C200502101642.j1AGgMRW020182%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000003.html">
+   <LINK REL="Next"  HREF="000005.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r8 - / src/egxp</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r8%20-%20/%20src/egxp&In-Reply-To=%3C200502101642.j1AGgMRW020182%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r8 - / src/egxp">jol at sheep.berlios.de
+       </A><BR>
+    <I>Thu Feb 10 17:42:22 CET 2005</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000003.html">[Eim-svn] r7 - / src/egxp
+</A></li>
+        <LI>Next message: <A HREF="000005.html">[Eim-svn] r9 - /
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4">[ date ]</a>
+              <a href="thread.html#4">[ thread ]</a>
+              <a href="subject.html#4">[ subject ]</a>
+              <a href="author.html#4">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-02-10 17:42:20 +0100 (Thu, 10 Feb 2005)
+New Revision: 8
+
+Modified:
+   ChangeLog
+   src/egxp/egxp_message.c
+   src/egxp/egxp_node.c
+   src/egxp/egxp_node.h
+   src/egxp/egxp_node_struct.h
+   src/egxp/egxp_opcode.c
+   src/egxp/egxp_protocol_handler.c
+   src/egxp/egxp_protocol_handler.h
+   src/egxp/test.c
+Log:
+- replace free statement with the EFL FREE macro
+- fix some error around the callback stuff ...
+- continue the work on egxp_protocol_handler. Now, we are able to
+  get the protocol node in function of the received message.
+- add some documentation around egxp_node
+
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-02-09 21:16:10 UTC (rev 7)
++++ ChangeLog	2005-02-10 16:42:20 UTC (rev 8)
+@@ -1,3 +1,10 @@
++2005-02-10(jol):
++	- replace free statement with the EFL FREE macro
++	- fix some error around the callback stuff ...
++	- continue the work on egxp_protocol_handler. Now, we are able to
++	get the protocol node in function of the received message.
++	- add some documentation around egxp_node
++	
+ 2005-02-09(jol):
+ 	- Remove all complexe stuff, in fact i've remove child* and conditional* because they were too much complexe. I've replaced
+ 	all the stuff in a simple structure.
+@@ -18,4 +25,4 @@
+ 	- fix a memleak from egxp_free
+ 	- add Egxp_ConditionalNode
+ 	- add TODO file
+-	
+\ No newline at end of file
++	
+
+Modified: src/egxp/egxp_message.c
+===================================================================
+--- src/egxp/egxp_message.c	2005-02-09 21:16:10 UTC (rev 7)
++++ src/egxp/egxp_message.c	2005-02-10 16:42:20 UTC (rev 8)
+@@ -56,7 +56,7 @@
+ void egxp_message_free (Egxp_Message * m) {
+   if (m == NULL) return;
+   
+-  free (m-&gt;tagname);
++  FREE (m-&gt;tagname);
+   ecore_list_destroy (m-&gt;attributes);
+   ecore_list_destroy (m-&gt;childs);
+   
+@@ -65,7 +65,7 @@
+     egxp_message_remove_child (m-&gt;parent, m);
+   }
+   
+-  free (m);
++  FREE (m);
+ }
+ 
+ Egxp_Message * egxp_message_get_child (Egxp_Message *m, char * tagname) {
+@@ -238,7 +238,7 @@
+       buf_len += len;
+       buf = (char*) realloc (buf, buf_len);
+       buf = strncat (buf, tmp_buf, len);
+-      free (tmp_buf);
++      FREE (tmp_buf);
+     }
+     
+     // the termination tag
+@@ -258,7 +258,7 @@
+   if (m == NULL) return;
+   char * buf = egxp_message_to_xml (m, 1);
+   printf(&quot;%s\n&quot;, buf);
+-  free(buf);
++  FREE(buf);
+ }
+ 
+ 
+@@ -280,7 +280,7 @@
+ void egxp_message_attribute_free (Egxp_MessageAttribute * ma) {
+   if (ma == NULL) return;
+   
+-  free (ma-&gt;key);
+-  free (ma-&gt;value);
+-  free (ma);
++  FREE (ma-&gt;key);
++  FREE (ma-&gt;value);
++  FREE (ma);
+ }
+
+Modified: src/egxp/egxp_node.c
+===================================================================
+--- src/egxp/egxp_node.c	2005-02-09 21:16:10 UTC (rev 7)
++++ src/egxp/egxp_node.c	2005-02-10 16:42:20 UTC (rev 8)
+@@ -30,7 +30,7 @@
+ 
+ Egxp_Node * egxp_node_new (const int tag) {
+ #ifdef EGXP_DEBUG
+-  printf(&quot;TRACE: egxp_node__base_new\n&quot;);
++  printf(&quot;TRACE: egxp_node_new\n&quot;);
+ #endif 
+ 
+   Egxp_Node * tmp = EGXP_NODE(malloc(sizeof(Egxp_Node)));
+@@ -57,14 +57,14 @@
+ #endif 
+   assert (n);
+   
+-  if (n-&gt;conditions) ecore_hash_destroy (n-&gt;conditions);
++  if (n-&gt;conditions) ecore_list_destroy (n-&gt;conditions);
+   if (n-&gt;childs) ecore_hash_destroy (n-&gt;childs);
+-  free (n);
++  FREE (n);
+ }
+ 
+ 
+ 
+-void egxp_node_set_cb (Egxp_Node * n, egxp_callback_ptr * begin, egxp_callback_ptr * end) {
++void egxp_node_set_cb (Egxp_Node * n, egxp_callback_ptr begin, egxp_callback_ptr end) {
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_node_set_cb\n&quot;);
+ #endif 
+@@ -86,15 +86,47 @@
+   
+   /* check if the conditions lists is created */
+   if (cn-&gt;conditions == NULL) {
+-    cn-&gt;conditions = ecore_hash_new (ecore_direct_hash, ecore_direct_compare);
+-    ecore_hash_set_free_value (cn-&gt;conditions, (Ecore_Free_Cb)egxp_condition_free);
++    cn-&gt;conditions = ecore_list_new ();
++    ecore_list_set_free_cb (cn-&gt;conditions, (Ecore_Free_Cb)egxp_condition_free);
+   }
+   
+   /* append the condition */
+-  ecore_hash_set (cn-&gt;conditions, (int*)cond-&gt;key, cond);
++  ecore_list_append (cn-&gt;conditions, cond);
+ }
+ 
+ 
++void egxp_node_add_in_order (Ecore_DList * l, Egxp_Node * n) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_node_add_in_order\n&quot;);
++#endif
++
++  assert (l &amp;&amp; n);
++  Egxp_Node * pn = NULL;
++
++  /* before doing anything, check if there is condition,
++     if not we add it to the end if the list */
++  if (n-&gt;conditions == NULL || ecore_list_nodes (l) == 0) {
++    ecore_dlist_append (l, n);
++    return;
++  }
++  
++  
++  /* go to the first node */
++  ecore_dlist_goto_first(l);
++  
++  while((pn = EGXP_NODE(ecore_dlist_next(l))) != NULL) {
++    if (pn-&gt;conditions == NULL || 
++        ecore_dlist_nodes (n-&gt;conditions) &gt; ecore_dlist_nodes(pn-&gt;conditions)) {
++      ecore_dlist_previous(l);
++      ecore_dlist_insert (l, n);
++      return;
++    }
++  }
++  
++  ecore_dlist_append (l, n);
++}
++
++
+ void egxp_node_add_child (Egxp_Node * parent, Egxp_Node * child) {
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_node_add_child\n&quot;);
+@@ -106,23 +138,24 @@
+     /* create a hash */
+     parent-&gt;childs = ecore_hash_new (ecore_direct_hash, ecore_direct_compare);
+     /* destroy each element */
+-    ecore_hash_set_free_value (parent-&gt;childs, (Ecore_Free_Cb)ecore_list_destroy);
++    ecore_hash_set_free_value (parent-&gt;childs, (Ecore_Free_Cb)ecore_dlist_destroy);
+   }
+   
+   /* try to get the list for the special tag */
+-  Ecore_List * ltmp = ecore_hash_get (parent-&gt;childs, (int*)child-&gt;tag);
++  Ecore_DList * ltmp = ECORE_DLIST (ecore_hash_get (parent-&gt;childs, (int*)child-&gt;tag));
+   
+   if (ltmp == NULL) {
+     /* doesn't exist, so create it */
+-    ltmp = ecore_list_new ();
+-    ecore_list_set_free_cb (ltmp,(Ecore_Free_Cb)egxp_node_free);
++    ltmp = ecore_dlist_new ();
++    ecore_dlist_set_free_cb (ltmp,(Ecore_Free_Cb)egxp_node_free);
+     
+     /* append the list to the hash, hash is indexed by the tag id */
+     ecore_hash_set (parent-&gt;childs, (int*)child-&gt;tag, ltmp);
+   }
+   
+   /* now append the child to the list */
+-  ecore_list_append (ltmp, child);
++  egxp_node_add_in_order (ltmp, child);
++
+   /* set the parent for the child */
+   child-&gt;parent = parent;
+ }
+
+Modified: src/egxp/egxp_node.h
+===================================================================
+--- src/egxp/egxp_node.h	2005-02-09 21:16:10 UTC (rev 7)
++++ src/egxp/egxp_node.h	2005-02-10 16:42:20 UTC (rev 8)
+@@ -26,16 +26,45 @@
+ /****************************************************************/
+ /****************************************************************/
+ /****************************************************************/
++
++/**
++ * Create a new node.
++ * @param tag: The tag id for this node
++ * @return: the newly created node
++ */
+ Egxp_Node * egxp_node_new (const int tag);
+ 
++
++/**
++ * Free a node
++ * @param n: Deallocate the memory used by the node
++ */
+ void egxp_node_free (Egxp_Node * n);
+ 
+-void egxp_node_set_cb (Egxp_Node * n, egxp_callback_ptr * begin, egxp_callback_ptr * end);
+ 
++/**
++ * Set the callback to the node.
++ * This callback are called when the node is processed by the protocol handler.
++ * @param n: the node
++ * @param begin: The begin callback
++ * @param end: the end callback
++ */
++void egxp_node_set_cb (Egxp_Node * n, egxp_callback_ptr begin, egxp_callback_ptr end);
+ 
++
++/**
++ * Add condition to this node.
++ * @param cn: The node
++ * @param cond: The condition to add
++ */
+ void egxp_node_add_condition (Egxp_Node* cn, Egxp_Condition * cond);
+ 
+ 
++/**
++ * Add a child to the node
++ * @param parent: The parent node
++ * @param child: The child to add to the parent
++ */
+ void egxp_node_add_child (Egxp_Node * parent, Egxp_Node * child);
+ 
+ #endif
+
+Modified: src/egxp/egxp_node_struct.h
+===================================================================
+--- src/egxp/egxp_node_struct.h	2005-02-09 21:16:10 UTC (rev 7)
++++ src/egxp/egxp_node_struct.h	2005-02-10 16:42:20 UTC (rev 8)
+@@ -54,11 +54,11 @@
+   Egxp_Node * parent;
+   
+   /* the callback */
+-  egxp_callback_ptr * begin_cb;
+-  egxp_callback_ptr * end_cb; 
++  egxp_callback_ptr begin_cb;
++  egxp_callback_ptr end_cb; 
+   
+-  /* conditions are inside a hash */
+-  Ecore_Hash * conditions;
++  /* conditions are inside a list */
++  Ecore_List * conditions;
+   
+   /* the child. It's a hash&lt;tag_id, list&lt;Egxp_NodeBase*&gt;&gt; */
+   Ecore_Hash * childs;
+
+Modified: src/egxp/egxp_opcode.c
+===================================================================
+--- src/egxp/egxp_opcode.c	2005-02-09 21:16:10 UTC (rev 7)
++++ src/egxp/egxp_opcode.c	2005-02-10 16:42:20 UTC (rev 8)
+@@ -126,12 +126,11 @@
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_opcode_get_id\n&quot;);
+ #endif
+-  assert (op &amp;&amp; name);
++  assert (op);
+ 
+   int * tmp = ecore_hash_get (op-&gt;string_id, (char*)name);
+   if (!tmp) {
+-    printf(&quot;ERROR: opcode %s seems to has no id\n&quot;); 
+-    assert (0);
++    printf(&quot;ERROR: unknown opcode %s.\n&quot;); 
+     return -1;
+   }
+   
+
+Modified: src/egxp/egxp_protocol_handler.c
+===================================================================
+--- src/egxp/egxp_protocol_handler.c	2005-02-09 21:16:10 UTC (rev 7)
++++ src/egxp/egxp_protocol_handler.c	2005-02-10 16:42:20 UTC (rev 8)
+@@ -51,8 +51,9 @@
+   XML_SetCharacterDataHandler(tmp-&gt;parser,  egxp_protocol_handler_char_data);
+ 
+   /* initialize the protocol stack */
+-  tmp-&gt;protocol_stack = NULL;
+-  
++  tmp-&gt;protocol_stack = e-&gt;root;
++  assert (tmp-&gt;protocol_stack != NULL);
++
+   return tmp;
+ }
+ 
+@@ -91,14 +92,10 @@
+   Egxp_ProtocolHandler * ph = eg-&gt;protocol_handler;
+   int i;
+   char use_callback = 0;
++  Egxp_Node * node = NULL;
+ 
+   assert (eg &amp;&amp; ph);
+ 
+-  /* really hard stuff here, we need to keep in a stack the protocol evolution
+-     in order to call the correct callback */
+-
+-  /* we need to store the message hierarchy here (current_msg) */
+-  
+   /* build the message with the specific id */
+   /* NOTE we should update the egxp_message to use integer id */
+   Egxp_Message * message = egxp_message_new ((char*) name);
+@@ -115,42 +112,22 @@
+     egxp_message_add_child (ph-&gt;current_msg, message);
+     ph-&gt;current_msg = message;
+   }
+-
+-  /* need to detect which callback to call, if an element in not 
+-     inside the protocol */
+-  if (ph-&gt;protocol_stack == NULL) {
+-    /* if null it's because it's the first time we are here 
+-       so we need to check inside  protocol tree if the tag
+-       is the root.
+-    */
+-    assert (eg-&gt;root);
+-    
+-    if (!strcmp (egxp_opcode_get_string (eg-&gt;opcodes, eg-&gt;root-&gt;tag),
+-		 name)) {
+-      /* they are equals, we begin :p */
+-      ph-&gt;protocol_stack = eg-&gt;root;
+-      use_callback = 1;
+-    } else {
+-      /* seems to be an error */
+-    }
++  
++  /* manage protocol */
++  assert (ph-&gt;protocol_stack);
++  
++  /* try to get the Egxp_Node correspond to the tag id and parameter */
++  node = egxp_protocol_handler_get_node (ph-&gt;protocol_stack, message, eg-&gt;opcodes);
++  
++  if (node == NULL) {
++    /* do nothing */
+   } else {
+-    /* 
+-       we check if the protocol_stack element has the name as
+-       child node, if the tag name is present we are on the 
+-       good way, otherwise it seems that the implementation is 
+-       not completed
+-    */
++    /* update the hierarchy */
++    ph-&gt;protocol_stack = node;
+     
++    /* take a look if it's possible to execute the callback */
++    if (node-&gt;begin_cb) node-&gt;begin_cb (message, eg);
+   }
+-
+-  
+-  /*
+-    if all is ok, we can call the callback associated to this
+-    message (check the use_callback value)
+-  */
+-  if (use_callback) {
+-    assert (ph-&gt;protocol_stack);
+-  }
+ }
+ 
+ void egxp_protocol_handler_end_element(void *userData, const char *name) {
+@@ -169,3 +146,58 @@
+   
+   
+ }
++
++
++
++Egxp_Node * egxp_protocol_handler_get_node (Egxp_Node * node, Egxp_Message * message, Egxp_Opcode * opcode) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_protocol_handler_get_node\n&quot;);
++#endif
++  
++  assert (node &amp;&amp; message);
++  Egxp_Node * ntmp = NULL;
++  if (node-&gt;childs == NULL) return NULL;
++  
++  /* get the good list */
++  Ecore_DList * ltmp = ecore_hash_get (node-&gt;childs,
++                                       (int*)egxp_opcode_get_id (opcode, message-&gt;tagname));
++  if (ltmp == NULL) return NULL;
++  
++  /* go to the first node */
++  ecore_dlist_goto_first(ltmp);
++  while ( (ntmp = ecore_dlist_next(ltmp)) != NULL) {
++    /* check if all conditions of the ntmp is inside the message */
++    if (ntmp-&gt;conditions == NULL) {
++      return ntmp;
++    }else {
++      Egxp_Condition * cond = NULL;
++      char condition_ok = 1;
++      ecore_list_goto_first (ntmp-&gt;conditions);
++      /* browse all condition of the node */
++      while ( (cond = ecore_list_next (ntmp-&gt;conditions)) != NULL) {
++        char * attr_val = egxp_message_get_attribute (message, (char*)egxp_opcode_get_string (opcode, cond-&gt;key));
++        /* if we have not found a condition */
++        if (attr_val == NULL) {
++          condition_ok = 0;
++          break;
++        }
++        
++        /* check now if the value is the correct value */
++        if( cond-&gt;value == egxp_opcode_get_id (opcode, attr_val)) {
++          FREE (attr_val);
++          continue;
++        } else {
++          FREE (attr_val);
++          condition_ok = 0;
++          break;
++        }
++      } 
++
++      /* check if the node is ok */
++      if (condition_ok) return ntmp;
++    }
++  }
++  
++  /* not found */
++  return NULL;
++}
+
+Modified: src/egxp/egxp_protocol_handler.h
+===================================================================
+--- src/egxp/egxp_protocol_handler.h	2005-02-09 21:16:10 UTC (rev 7)
++++ src/egxp/egxp_protocol_handler.h	2005-02-10 16:42:20 UTC (rev 8)
+@@ -60,6 +60,15 @@
+ 
+ 
+ 
++/**
++ * This method check if there is a child inside the node parameter which has 
++ * same properties than the message.
++ * 
++ * @param node : the node
++ * @param m: the message.
++ */
++Egxp_Node * egxp_protocol_handler_get_node (Egxp_Node * node, 
++                                            Egxp_Message * message,
++                                            Egxp_Opcode * opcode);
+ 
+-
+ #endif
+
+Modified: src/egxp/test.c
+===================================================================
+--- src/egxp/test.c	2005-02-09 21:16:10 UTC (rev 7)
++++ src/egxp/test.c	2005-02-10 16:42:20 UTC (rev 8)
+@@ -7,46 +7,90 @@
+ 
+ int main (int argc, char ** argv) {
+   /* create the protocol grammar */
+-  Egxp * ph = egxp_new ();
++  Egxp * eg = egxp_new ();
+   Egxp_Node * n1 = NULL;
+   Egxp_Node * n2 = NULL;
+   Egxp_Node * n3 = NULL;
+   
++  /******************************************************/
++  /******************************************************/
++  /*          CREATE THE BASICS OPCODES                 */
++  /******************************************************/
++  /******************************************************/
++  
++
+   /* define basics grammar */
+-  egxp_opcode_add (ph-&gt;opcodes, &quot;stream&quot;);
+-  egxp_opcode_add (ph-&gt;opcodes, &quot;jabber:iq:auth&quot;);
++  egxp_opcode_add (eg-&gt;opcodes, &quot;stream&quot;);
++  egxp_opcode_add (eg-&gt;opcodes, &quot;jabber:iq:auth&quot;);
+   
+-  egxp_opcode_add (ph-&gt;opcodes, &quot;iq&quot;);
+-  egxp_opcode_add (ph-&gt;opcodes, &quot;type&quot;);
+-  egxp_opcode_add (ph-&gt;opcodes, &quot;get&quot;);
+-  egxp_opcode_add (ph-&gt;opcodes, &quot;set&quot;);
++  egxp_opcode_add (eg-&gt;opcodes, &quot;iq&quot;);
++  egxp_opcode_add (eg-&gt;opcodes, &quot;type&quot;);
++  egxp_opcode_add (eg-&gt;opcodes, &quot;get&quot;);
++  egxp_opcode_add (eg-&gt;opcodes, &quot;set&quot;);
+   
+ 
+   /* display information about opcode */
+-  egxp_opcode_display (ph-&gt;opcodes);
++  egxp_opcode_display (eg-&gt;opcodes);
+   
+-  n1 = egxp_node_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;stream&quot;));
+-  egxp_node_add_child (ph-&gt;root, n1);
+   
++
++  /******************************************************/
++  /******************************************************/
++  /*             CREATE THE PROTOCOL                    */
++  /******************************************************/
++  /******************************************************/
++  
++  /* add stream to the root */
++  n1 = egxp_node_new (egxp_opcode_get_id (eg-&gt;opcodes, &quot;stream&quot;));
++  egxp_node_add_child (eg-&gt;root, n1);
++  
+   /* add iq tag */
+-  n2 = egxp_node_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;iq&quot;));
++  n2 = egxp_node_new (egxp_opcode_get_id (eg-&gt;opcodes, &quot;iq&quot;));
+   egxp_node_add_child (n1, n2);
+   
+   /* add iq tag + type=set */
+-  n2 = egxp_node_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;iq&quot;));
+-  egxp_node_add_condition (n2, egxp_condition_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;type&quot;),
+-							egxp_opcode_get_id (ph-&gt;opcodes, &quot;set&quot;)));
++  n2 = egxp_node_new (egxp_opcode_get_id (eg-&gt;opcodes, &quot;iq&quot;));
++  egxp_node_add_condition (n2, egxp_condition_new (egxp_opcode_get_id (eg-&gt;opcodes, &quot;type&quot;),
++                                                   egxp_opcode_get_id (eg-&gt;opcodes, &quot;set&quot;)));
+   egxp_node_add_child (n1, n2);
+   
+-  
+   /* add iq tag + type=get */
+-  n2 = egxp_node_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;iq&quot;));
+-  egxp_node_add_condition (n2, egxp_condition_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;type&quot;),
+-							egxp_opcode_get_id (ph-&gt;opcodes, &quot;get&quot;)));
++  n2 = egxp_node_new (egxp_opcode_get_id (eg-&gt;opcodes, &quot;iq&quot;));
++  egxp_node_add_condition (n2, egxp_condition_new (egxp_opcode_get_id (eg-&gt;opcodes, &quot;type&quot;),
++                                                   egxp_opcode_get_id (eg-&gt;opcodes, &quot;get&quot;)));
+   egxp_node_add_child (n1, n2);
+   
++
++  /******************************************************/
++  /******************************************************/
++  /*            CREATE SOME MESSAGES                    */
++  /******************************************************/
++  /******************************************************/
++  
++  /* create a stream message without attribute */
++  Egxp_Message * mesg1 = egxp_message_new (&quot;stream&quot;);
++  /* test if it's possible to get the node from the egxp protocol handler */
++  n1 = egxp_protocol_handler_get_node (eg-&gt;protocol_handler-&gt;protocol_stack,
++                                       mesg1, eg-&gt;opcodes);
++  printf(&quot;Get stream node from protocol handler(it should not be null): %X\n&quot;, n1); 
++  
++  /* free the message */
++  egxp_message_free (mesg1);
++  
++  
++
++  /* create a iq message with one attributes */
++  mesg1 = egxp_message_new (&quot;iq&quot;);
++  egxp_message_add_attribute (mesg1, egxp_message_attribute_new (&quot;type&quot;, &quot;get&quot;));
++  /* test if it's possible to get the node from the egxp protocol handler */
++  printf(&quot;Get iq node from protocol handler(it should not be null): %X\n&quot;,
++         egxp_protocol_handler_get_node (n1, mesg1, eg-&gt;opcodes));
++  /* free the message */
++  egxp_message_free (mesg1);
++  
++  
+   /* free opcode */
+-  egxp_free (ph);
++  egxp_free (eg);
+   
+   return 0;
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000003.html">[Eim-svn] r7 - / src/egxp
+</A></li>
+	<LI>Next message: <A HREF="000005.html">[Eim-svn] r9 - /
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4">[ date ]</a>
+              <a href="thread.html#4">[ thread ]</a>
+              <a href="subject.html#4">[ subject ]</a>
+              <a href="author.html#4">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

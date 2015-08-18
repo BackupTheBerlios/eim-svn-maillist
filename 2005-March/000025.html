@@ -1,0 +1,363 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r29 - / src/xmpp src/xmpp-im
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-March/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r29%20-%20/%20src/xmpp%20src/xmpp-im&In-Reply-To=%3C200503302142.j2ULgrTL029527%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000024.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r29 - / src/xmpp src/xmpp-im</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r29%20-%20/%20src/xmpp%20src/xmpp-im&In-Reply-To=%3C200503302142.j2ULgrTL029527%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r29 - / src/xmpp src/xmpp-im">jol at sheep.berlios.de
+       </A><BR>
+    <I>Wed Mar 30 23:42:53 CEST 2005</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000024.html">[Eim-svn] r28 - / src/xmpp src/xmpp-im
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#25">[ date ]</a>
+              <a href="thread.html#25">[ thread ]</a>
+              <a href="subject.html#25">[ subject ]</a>
+              <a href="author.html#25">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-03-30 23:42:22 +0200 (Wed, 30 Mar 2005)
+New Revision: 29
+
+Modified:
+   ChangeLog
+   src/xmpp-im/test.c
+   src/xmpp-im/xmpp_im.c
+   src/xmpp-im/xmpp_im_contact.c
+   src/xmpp-im/xmpp_im_roster.c
+   src/xmpp/test.c
+   src/xmpp/xmpp_jid.c
+   src/xmpp/xmpp_jid.h
+Log:
+- fix a bug in the xmpp_jid code,
+- the bug hunting progress ...
+-- This line, and those below, will be ignored--
+
+M    src/xmpp/xmpp_jid.c
+M    src/xmpp/xmpp_jid.h
+M    src/xmpp/test.c
+M    src/xmpp-im/test.c
+M    src/xmpp-im/xmpp_im_contact.c
+M    src/xmpp-im/xmpp_im_roster.c
+M    src/xmpp-im/xmpp_im.c
+M    ChangeLog
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-03-22 21:07:59 UTC (rev 28)
++++ ChangeLog	2005-03-30 21:42:22 UTC (rev 29)
+@@ -1,3 +1,7 @@
++2005-03-30(jol):
++	- fix a bug in the xmpp_jid code,
++	- the bug hunting progress ...
++	
+ 2005-03-22(jol):
+ 	- Now all contacts and group are stored in memory,
+ 	- Minor add inside xmpp_jid.
+
+Modified: src/xmpp/test.c
+===================================================================
+--- src/xmpp/test.c	2005-03-22 21:07:59 UTC (rev 28)
++++ src/xmpp/test.c	2005-03-30 21:42:22 UTC (rev 29)
+@@ -12,8 +12,17 @@
+   return 1;
+ }
+ 
+-int main (int argc, char ** argv) {
+-  
++
++void test_jid () {
++  int i;
++  for (i = 0; i &lt; 2000; i++) {
++    Xmpp_JID * tmp = xmpp_jid_new_from_bare (&quot;<A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">jol at amessage.de</A>/essai&quot;);
++    xmpp_jid_free (tmp);
++  }
++}
++
++
++int test_xmpp (int argc, char ** argv) {
+   /**
+    * usage
+    */
+@@ -64,6 +73,11 @@
+   /* shutdown */
+   ecore_con_shutdown ();
+   ecore_shutdown();
++}
++
++int main (int argc, char ** argv) {
++
++  //test_jid ();
+   
+-  return 0;
++  return test_xmpp (argc, argv);
+ }
+
+Modified: src/xmpp/xmpp_jid.c
+===================================================================
+--- src/xmpp/xmpp_jid.c	2005-03-22 21:07:59 UTC (rev 28)
++++ src/xmpp/xmpp_jid.c	2005-03-30 21:42:22 UTC (rev 29)
+@@ -35,10 +35,10 @@
+   
+   Xmpp_JID * tmp = XMPP_JID(malloc (sizeof(Xmpp_JID)));
+   
+-  tmp-&gt;user = strdup (user);
+-  tmp-&gt;host = strdup (host);
++  tmp-&gt;user = user?strdup (user):NULL;
++  tmp-&gt;host = host?strdup (host):NULL;
+   tmp-&gt;resource = resource?strdup (resource):NULL;
+-
++  
+   return tmp;
+ }
+ 
+@@ -69,20 +69,26 @@
+ 
+   /* check if there is a name */
+   if (at != NULL) {
+-    tmp-&gt;user = strndup ((const char*)jidbar, (size_t) (((int)at) - ((int)jidbar)) / sizeof (char));
++    int t = at - jidbar;
++    tmp-&gt;user = (char*) malloc ( (t+1) * sizeof(char));
++    tmp-&gt;user = strncpy (tmp-&gt;user, jidbar, t);
++    tmp-&gt;user[t] = '\0';
+     at = (at+1);
+   } else {
+-    tmp-&gt;user = strdup(&quot;&quot;);
++    tmp-&gt;user = NULL; //strdup(&quot;&quot;);
+     at = jidbar;
+   }
+ 
+   /* set the host */
+   if (slash == NULL) {
+     tmp-&gt;host = strdup ((char*) at);
+-    tmp-&gt;resource = strdup (&quot;&quot;);
++    tmp-&gt;resource = NULL;
+   } else {
+     /* set the host */
+-    tmp-&gt;host = strndup ((const char*) at, (size_t) (((int)slash) - ((int)at)) / sizeof(char));
++    int t = (size_t) (((int)slash) - ((int)at)) / sizeof(char);
++    tmp-&gt;host = (char*) malloc ((t+1) * sizeof (char));
++    tmp-&gt;host = strncpy (tmp-&gt;host, at, t);
++    tmp-&gt;host[t] = '\0';
+     tmp-&gt;resource = strdup((const char*) (slash + 1));
+   }
+ 
+@@ -99,14 +105,17 @@
+   unsigned int u = jid-&gt;user?strlen (jid-&gt;user):0;
+   unsigned int h = jid-&gt;host?strlen (jid-&gt;host):0;
+   
+-  /* initialize the structre */
+-  char * tmp = (char*) malloc ( (u + h + 2) * sizeof (char));
+-  tmp = strncpy (tmp, jid-&gt;user, u);
+-  tmp[u] = '@';
+-  strncpy (tmp + ((u+1) * sizeof (char)), jid-&gt;host, h);
+-  tmp [u + h + 1] = '\0';
++  if (jid-&gt;user) {
++    /* allocate user + '@' + host + '\0' */
++    char * tmp = (char*) malloc ( (u + h + 2) * sizeof (char));
++    tmp = strncpy (tmp, jid-&gt;user, u);
++    tmp[u] = '@';
++    strncpy (tmp + ((u+1) * sizeof (char)), jid-&gt;host, h);
++    tmp [u + h + 1] = '\0';
++    return tmp;
++  }
+   
+-  return tmp;
++  return strdup (jid-&gt;host);
+ }
+ 
+ 
+@@ -117,20 +126,34 @@
+   assert (jid);
+   
+   /* compute the size <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">user at host</A>/resource\0 */
+-  unsigned int u = jid-&gt;user?strlen (jid-&gt;user):0;
+-  unsigned int h = jid-&gt;host?strlen (jid-&gt;host):0;
++  // unsigned int u = jid-&gt;user?strlen (jid-&gt;user):0;
++  // unsigned int h = jid-&gt;host?strlen (jid-&gt;host):0;
+   unsigned int r = jid-&gt;resource?strlen (jid-&gt;resource):0;
+   
+   /* initialize the structre */
+-  char * tmp = (char*) malloc ( (u + h + r + 3) * sizeof (char));
++  /*  char * tmp = (char*) malloc ( (u + h + r + 3) * sizeof (char));
+   tmp = strncpy (tmp, jid-&gt;user, u);
+   tmp[u] = '@';
+   strncpy (tmp + ((u+1) * sizeof (char)), jid-&gt;host, h);
+   tmp[u + 1 + h] = '/';
+   strncpy (tmp + ((u + 2 + h) * sizeof (char)), jid-&gt;resource, r);
+   tmp [u + h + r + 2] = '\0';
++  */
+   
+-  return tmp;
++  
++  if (r) {
++    char * tmp =  xmpp_jid_get_bar (jid);
++    int idx = strlen (tmp);
++    char * tmp2 = (char*) malloc ( (idx + r + 1) * sizeof (char));
++    strcpy (tmp2, tmp);
++    strcpy (tmp2 + idx, jid-&gt;resource);
++    tmp2[idx + r ] = '\0';
++    free (tmp);
++    return tmp2;
++  }
++
++  
++  return xmpp_jid_get_bar (jid);
+ }
+ 
+ 
+@@ -139,8 +162,5 @@
+   printf(&quot;TRACE: xmpp_jid_has_user\n&quot;);
+ #endif 
+   assert (jid);
+-  if (jid-&gt;user) {
+-  	return strlen (jid-&gt;user) != 0;
+-  }
+-  return 0;
+-}
+\ No newline at end of file
++  return jid-&gt;user != NULL;
++}
+
+Modified: src/xmpp/xmpp_jid.h
+===================================================================
+--- src/xmpp/xmpp_jid.h	2005-03-22 21:07:59 UTC (rev 28)
++++ src/xmpp/xmpp_jid.h	2005-03-30 21:42:22 UTC (rev 29)
+@@ -47,7 +47,7 @@
+  * @param bar: the bar representation
+  * @return the newly created jid
+  */ 
+-Xmpp_JID * xmpp_jid_new_from_bar (char * jidbar);
++Xmpp_JID * xmpp_jid_new_from_bare (char * jidbar);
+ 
+ 
+ /**
+
+Modified: src/xmpp-im/test.c
+===================================================================
+--- src/xmpp-im/test.c	2005-03-22 21:07:59 UTC (rev 28)
++++ src/xmpp-im/test.c	2005-03-30 21:42:22 UTC (rev 29)
+@@ -78,6 +78,7 @@
+   /* initialize protocol */
+   Xmpp * xm = xmpp_register (eg);
+   XmppIM * xmppim = xmpp_im_register (eg);
++  
+ 
+   /* display the egxp structure */
+   egxp_display(eg);
+@@ -124,7 +125,7 @@
+ int main (int argc, char ** argv) {
+ 
+   /* test roster */
+-  test_roster ();
++  //test_roster ();
+ 
+   return test_all (argc, argv);
+ }
+
+Modified: src/xmpp-im/xmpp_im.c
+===================================================================
+--- src/xmpp-im/xmpp_im.c	2005-03-22 21:07:59 UTC (rev 28)
++++ src/xmpp-im/xmpp_im.c	2005-03-30 21:42:22 UTC (rev 29)
+@@ -19,6 +19,7 @@
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+ #include &lt;assert.h&gt;
++#include &lt;stdlib.h&gt;
+ #include &quot;xmpp_im.h&quot;
+ 
+ 
+
+Modified: src/xmpp-im/xmpp_im_contact.c
+===================================================================
+--- src/xmpp-im/xmpp_im_contact.c	2005-03-22 21:07:59 UTC (rev 28)
++++ src/xmpp-im/xmpp_im_contact.c	2005-03-30 21:42:22 UTC (rev 29)
+@@ -20,6 +20,7 @@
+ */
+ #include &lt;assert.h&gt;
+ #include &lt;stdio.h&gt;
++#include &lt;string.h&gt;
+ 
+ #include &quot;xmpp/xmpp_opcode.h&quot;
+ #include &quot;xmpp/xmpp_jid.h&quot;
+@@ -147,6 +148,8 @@
+     char * grp_name = egxp_message_get_data (msg_item);
+ 
+     /* add the contact to the group */
++    printf(&quot;DEBUG ---&gt; xmpp_im_contact_create_from_item_message GRP NAME: %s\n&quot;, 
++	   grp_name);
+     xmpp_im_roster_add_contact_to_group (r, contact, grp_name);
+     
+     /* free the group name */
+
+Modified: src/xmpp-im/xmpp_im_roster.c
+===================================================================
+--- src/xmpp-im/xmpp_im_roster.c	2005-03-22 21:07:59 UTC (rev 28)
++++ src/xmpp-im/xmpp_im_roster.c	2005-03-30 21:42:22 UTC (rev 29)
+@@ -54,7 +54,7 @@
+ #ifdef XMPPIM_DEBUG
+   printf(&quot;TRACE: xmpp_im_roster_update_from_message\n&quot;);
+ #endif
+-  }
++}
+ 
+ 
+ 
+@@ -249,11 +249,11 @@
+   printf(&quot;TRACE: xmpp_im_roster_update_from_item_messages\n&quot;);
+ #endif
+   assert (r &amp;&amp; list);
+-
++  
+   Egxp_Message * msg_item;
+   ecore_list_goto_first(list);
+   while ((msg_item = EGXP_MESSAGE(ecore_list_next(list))) != NULL) {
+-	xmpp_im_contact_create_from_item_message(r, msg_item);
++    xmpp_im_contact_create_from_item_message(r, msg_item);
+   }
+   xmpp_im_roster_display(r);
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000024.html">[Eim-svn] r28 - / src/xmpp src/xmpp-im
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#25">[ date ]</a>
+              <a href="thread.html#25">[ thread ]</a>
+              <a href="subject.html#25">[ subject ]</a>
+              <a href="author.html#25">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

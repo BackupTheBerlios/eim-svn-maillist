@@ -1,0 +1,614 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r37 - / src/core src/egxp src/gui src/xmpp
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-July/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r37%20-%20/%20src/core%20src/egxp%20src/gui%20src/xmpp&In-Reply-To=%3C200507241803.j6OI3Ypd004225%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r37 - / src/core src/egxp src/gui src/xmpp</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r37%20-%20/%20src/core%20src/egxp%20src/gui%20src/xmpp&In-Reply-To=%3C200507241803.j6OI3Ypd004225%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r37 - / src/core src/egxp src/gui src/xmpp">jol at berlios.de
+       </A><BR>
+    <I>Sun Jul 24 20:03:34 CEST 2005</I>
+    <P><UL>
+        
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#33">[ date ]</a>
+              <a href="thread.html#33">[ thread ]</a>
+              <a href="subject.html#33">[ subject ]</a>
+              <a href="author.html#33">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-07-24 20:03:27 +0200 (Sun, 24 Jul 2005)
+New Revision: 37
+
+Added:
+   src/core/account_properties.c
+   src/core/account_properties.h
+Modified:
+   ChangeLog
+   TODO
+   src/core/Makefile.am
+   src/core/eim.c
+   src/core/eim.h
+   src/egxp/egxp_connection.c
+   src/egxp/egxp_connection.h
+   src/gui/gui_main.c
+   src/xmpp/xmpp_jid.c
+   src/xmpp/xmpp_jid.h
+Log:
+- Improve the work around account configiuration. I've made some work 
+ to load account properties. 
+- Work on the core of eim.
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-06-02 22:39:56 UTC (rev 36)
++++ ChangeLog	2005-07-24 18:03:27 UTC (rev 37)
+@@ -1,3 +1,9 @@
++2005-07-24(jol):
++	- Improve the work around account configiuration. I've made some work 
++	to load account properties. 
++	- Work on the core of eim.
++	
++	
+ 2005-06-03(jol):
+ 	- create the core directory, it should contains all stuff about
+ 	  eim. Begin to think about core structure and how to save in good
+
+Modified: TODO
+===================================================================
+--- TODO	2005-06-02 22:39:56 UTC (rev 36)
++++ TODO	2005-07-24 18:03:27 UTC (rev 37)
+@@ -1,21 +1,19 @@
+-- configuration file: Use a edb file to store all configuration. We need to
+-keep a variable inside the file to tell us all configuration
+-available in the config file. Next we should be able to
+-restore all the stored configuration. We should
+-save all account inside one file accounts.edb 
++- Work on GUI:
++	- Work on menu popup, in fact we want to control all using
++	menupopup. So we need to create a mecanism to improve ewl menu.
++	- Work on the tree. We should be able to display different 
++	representation of the tree. Create a fusion display which regroup 
++	all your connection.
++	
+ 
+ 
++
+ - about the core/*, it must contains of the stuff necessary to
+ do all possible job with eim (load/save/control connection). 
+ 
+ 
+ HIGH URGENCY
+ - We need to make some important job about the core of EIM.
+-- In fact, we need to be able to have several Jabber account, so we need
+-  to manage in the core of eim the configuration of each account, for now 
+-  nothing has been done in this way. We need to create a core/directory which
+-  manage all the important stuff of the eim. Load/Save/ each properties using
+-  the edb_config system.
+ - prepare callback association, maybe create a structure containing all callback.
+   Or maybe we should make a cleaner stuff in function of the protocol used.
+ 
+
+Modified: src/core/Makefile.am
+===================================================================
+--- src/core/Makefile.am	2005-06-02 22:39:56 UTC (rev 36)
++++ src/core/Makefile.am	2005-07-24 18:03:27 UTC (rev 37)
+@@ -2,10 +2,12 @@
+ 
+ pkgincludeinputdir = $(pkgincludedir)/core
+ pkgincludeinput_HEADERS= \
+-	eim.h       
++	eim.h            \
++	account_properties.h
+ 
+ libcore_la_SOURCES =      \
+-	eim.c       
++	eim.c             \
++	account_properties.c
+ 
+ libcore_la_CFLAGS = \
+ 	-I$(top_srcdir)/src                 \
+
+Added: src/core/account_properties.c
+===================================================================
+--- src/core/account_properties.c	2005-06-02 22:39:56 UTC (rev 36)
++++ src/core/account_properties.c	2005-07-24 18:03:27 UTC (rev 37)
+@@ -0,0 +1,112 @@
++#include &lt;assert.h&gt;
++#include &lt;stdlib.h&gt;
++#include &lt;string.h&gt;
++#include &quot;Ecore_Config.h&quot;
++#include &quot;account_properties.h&quot;
++
++#define EIM_ACCOUNT_PROP              &quot;account&quot;
++
++#define EIM_ACCOUNT_PROP_JABBER_ID    &quot;jabber_id&quot;
++#define EIM_ACCOUNT_PROP_PASSWORD     &quot;password&quot;
++#define EIM_ACCOUNT_PROP_RESSOURCE    &quot;resource&quot;
++#define EIM_ACCOUNT_PROP_PRIORITY     &quot;priority&quot;
++
++#define EIM_ACCOUNT_PROP_PORT         &quot;port&quot;
++#define EIM_ACCOUNT_PROP_USE_SSL      &quot;use_ssl&quot;
++#define EIM_ACCOUNT_PROP_ALLOW_PLAINTEXT &quot;plain_text&quot;
++#define EIM_ACCOUNT_PROP_SEND_KEEP_ALIVE &quot;send_keep_alive&quot;
++
++#define EIM_ACCOUNT_PROP_AUTO_CONNECT   &quot;auto_connect&quot;
++#define EIM_ACCOUNT_PROP_AUTO_RECONNECT &quot;auto_reconnect&quot;
++#define EIM_ACCOUNT_PROP_LOG_HISTORY    &quot;log_history&quot;
++#define EIM_ACCOUNT_PROP_IGNORE_SSL_WARNING &quot;ignore_ssl_warning&quot;
++
++AccountProperties * account_properties_new () {
++#ifdef CORE_DEBUG
++  printf(&quot;TRACE: account_properties_new\n&quot;);
++#endif
++  AccountProperties * tmp = ACCOUNTPROPERTIES(malloc (sizeof(AccountProperties)));
++  memset (tmp, 0, sizeof (AccountProperties));
++  
++  return tmp;
++}
++
++
++AccountProperties * account_properties_new_from_config (int i) {
++#ifdef CORE_DEBUG
++  printf(&quot;TRACE: account_properties_new_from_config\n&quot;);
++#endif
++  assert (i &gt; -1);
++
++#define BUF_SIZE 250
++  char buf[BUF_SIZE + 5];
++  
++  AccountProperties * tmp = account_properties_new ();
++  
++  
++  snprintf(buf, BUF_SIZE, &quot;%s/%d/%s\0&quot;, EIM_ACCOUNT_PROP, i,
++	   EIM_ACCOUNT_PROP_JABBER_ID);
++  tmp-&gt;jabber_id = ecore_config_string_get(buf);
++  
++  snprintf(buf, BUF_SIZE, &quot;%s/%d/%s\0&quot;, EIM_ACCOUNT_PROP, i,
++	   EIM_ACCOUNT_PROP_PASSWORD);
++  tmp-&gt;password = ecore_config_string_get(buf);
++
++  snprintf(buf, BUF_SIZE, &quot;%s/%d/%s\0&quot;, EIM_ACCOUNT_PROP, i,
++	   EIM_ACCOUNT_PROP_RESSOURCE);
++  tmp-&gt;resource = ecore_config_string_get(buf);
++  
++  snprintf(buf, BUF_SIZE, &quot;%s/%d/%s\0&quot;, EIM_ACCOUNT_PROP, i,
++	  EIM_ACCOUNT_PROP_PRIORITY);
++  tmp-&gt;priority = ecore_config_int_get(buf);
++
++  snprintf(buf, BUF_SIZE, &quot;%s/%d/%s\0&quot;, EIM_ACCOUNT_PROP, i,
++	   EIM_ACCOUNT_PROP_PORT);
++  tmp-&gt;port = ecore_config_int_get(buf);
++  
++
++  snprintf(buf, BUF_SIZE, &quot;%s/%d/%s\0&quot;, EIM_ACCOUNT_PROP, i,
++	  EIM_ACCOUNT_PROP_USE_SSL);
++  tmp-&gt;use_ssl = ecore_config_int_get(buf);
++  
++  snprintf(buf, BUF_SIZE, &quot;%s/%d/%s\0&quot;, EIM_ACCOUNT_PROP, i,
++	  EIM_ACCOUNT_PROP_ALLOW_PLAINTEXT);
++  tmp-&gt;allow_plaintext = ecore_config_int_get(buf);
++
++  snprintf(buf, BUF_SIZE, &quot;%s/%d/%s\0&quot;, EIM_ACCOUNT_PROP, i,
++	  EIM_ACCOUNT_PROP_SEND_KEEP_ALIVE);
++  tmp-&gt;send_keep_alive = ecore_config_int_get(buf);
++  
++  snprintf(buf, BUF_SIZE, &quot;%s/%d/%s\0&quot;, EIM_ACCOUNT_PROP, i,
++	  EIM_ACCOUNT_PROP_AUTO_CONNECT);
++  tmp-&gt;auto_connect = ecore_config_int_get(buf);
++
++  snprintf(buf, BUF_SIZE, &quot;%s/%d/%s\0&quot;, EIM_ACCOUNT_PROP, i,
++	  EIM_ACCOUNT_PROP_AUTO_RECONNECT);
++  tmp-&gt;auto_reconnect = ecore_config_int_get(buf);
++
++  snprintf(buf, BUF_SIZE, &quot;%s/%d/%s\0&quot;, EIM_ACCOUNT_PROP, i,
++	  EIM_ACCOUNT_PROP_LOG_HISTORY);
++  tmp-&gt;log_history = ecore_config_int_get(buf);
++  
++  snprintf(buf, BUF_SIZE, &quot;%s/%d/%s\0&quot;, EIM_ACCOUNT_PROP, i,
++	  EIM_ACCOUNT_PROP_IGNORE_SSL_WARNING);
++  tmp-&gt;ignore_ssl_warning = ecore_config_int_get(buf);
++  
++  return tmp;
++}
++
++
++void account_properties_free (AccountProperties* ap) {
++#ifdef CORE_DEBUG
++  printf(&quot;TRACE: account_properties_free\n&quot;);
++#endif
++
++  assert (ap);
++
++  IF_FREE (ap-&gt;jabber_id);
++  IF_FREE (ap-&gt;password);
++  IF_FREE (ap-&gt;resource);
++
++  FREE (ap);
++}
+
+Added: src/core/account_properties.h
+===================================================================
+--- src/core/account_properties.h	2005-06-02 22:39:56 UTC (rev 36)
++++ src/core/account_properties.h	2005-07-24 18:03:27 UTC (rev 37)
+@@ -0,0 +1,42 @@
++#ifndef account_properties_header_
++#define account_properties_header_
++
++
++/**
++ * Define the properties for the Properties page.
++ * It contains all parameters available inside the Egxp and its extension
++ * We use this structure has temporary variable.
++ */
++typedef struct _AccountProperties AccountProperties;
++#define ACCOUNTPROPERTIES(o) ((AccountProperties*)o)
++struct _AccountProperties {
++  /* account */
++  char * jabber_id;
++  char * password;
++  char * resource;
++  int priority;
++
++  /* connection */
++  int port;
++  int use_ssl;
++  int allow_plaintext;
++  int send_keep_alive;
++  // manual server host port
++
++  /* details */
++
++  /* preferences */
++  int auto_connect;
++  int auto_reconnect;
++  int log_history;
++  int ignore_ssl_warning;
++};
++
++
++
++
++AccountProperties * account_properties_new ();
++AccountProperties * account_properties_new_from_config (int i);
++void account_properties_free (AccountProperties* ap);
++
++#endif
+
+Modified: src/core/eim.c
+===================================================================
+--- src/core/eim.c	2005-06-02 22:39:56 UTC (rev 36)
++++ src/core/eim.c	2005-07-24 18:03:27 UTC (rev 37)
+@@ -1,17 +1,43 @@
+ #include &lt;assert.h&gt;
+ #include &lt;stdlib.h&gt;
++#include &quot;Ecore_Config.h&quot;
++
++#include &quot;xmpp/xmpp.h&quot;
++#include &quot;xmpp-im/xmpp_im.h&quot;
++
++#include &quot;account_properties.h&quot;
+ #include &quot;eim.h&quot;
++ 
+ 
++#define EIM_CONFIG_NB_ACCOUNT &quot;nb_account&quot;
+ 
++
++/**
++ * Call this method to initialize 
++ * the default config (called when there is
++ * no config file 
++ */
++void _eim_load_default_config () {
++  ecore_config_int_default(EIM_CONFIG_NB_ACCOUNT, 0);
++}
++
++
+ Eim * eim_new () {
+ #ifdef CORE_DEBUG
+   printf(&quot;TRACE: eim_new\n&quot;);
+ #endif
++  /* create the eim object */
+   Eim * tmp = EIM(malloc(sizeof(Eim)));
+   
++  /* allocates the lists of egxp object */
+   tmp-&gt;egxps = ecore_list_new ();
+   ecore_list_set_free_cb (tmp-&gt;egxps, egxp_free);
+ 
++  /* allocates the list of properties accounts */
++  tmp-&gt;account_properties = ecore_list_new ();
++  ecore_list_set_free_cb (tmp-&gt;account_properties, account_properties_free);
++  
++  /* return the newly created object */
+   return tmp;
+ }
+ 
+@@ -23,8 +49,24 @@
+ #endif
+   assert (e);
+ 
++  int nb_account = 0;
++  int i;
+   
+-
++  /* read config file to get account properties */
++  if (ecore_config_init (&quot;eim&quot;) == ECORE_CONFIG_ERR_FAIL) {
++    printf(&quot;WARNING: config file not available\n&quot;);
++    /* load default config and save it*/
++    _eim_load_default_config ();
++    ecore_config_save ();
++  }
++  
++  /* here we can load each configuration */
++  ecore_config_load();
++  nb_account = ecore_config_int_get(EIM_CONFIG_NB_ACCOUNT);
++  for (i = 0; i &lt; nb_account; i++) {
++    ecore_list_append (e-&gt;account_properties, 
++		       account_properties_new_from_config (i));
++  }
+ }
+ 
+ 
+@@ -36,5 +78,43 @@
+   assert (e);
+   
+   if (e-&gt;egxps!= NULL) ecore_list_destroy (e-&gt;egxps);
++  if (e-&gt;account_properties) ecore_list_destroy (e-&gt;account_properties);
++
+   FREE (e);
+ }
++
++
++Egxp * eim_create_egxp_from (AccountProperties * ap) {
++#ifdef CORE_DEBUG
++  printf(&quot;TRACE: eim_create_egxp_from\n&quot;);
++#endif
++  assert (ap);
++
++  /* create egxp */
++  Egxp * eg = egxp_new ();
++  
++  /* add protocol to egxp */
++  Xmpp * xm = xmpp_register (eg);
++  XmppIM * xmppim = xmpp_im_register (eg);
++  
++  
++  /********************************************/
++  /* set the properties to the egxp structure */
++  /********************************************/
++
++  /* set jid (user/host/resource) */
++  xm-&gt;jid = xmpp_jid_new_from_bare (ap-&gt;jabber_id);
++  xmpp_jid_set_resource (xm-&gt;jid, ap-&gt;resource);
++
++  /* password */
++  xm-&gt;auth = xmpp_auth_new_with_passwd (ap-&gt;password);
++  
++  /* define the connection parameters (host/port/ssl) */
++  eg-&gt;connection = egxp_connection_new ( xm-&gt;jid-&gt;host, ap-&gt;port, ap-&gt;use_ssl);
++  eg-&gt;connection-&gt;ignore_ssl_warning = ap-&gt;ignore_ssl_warning;
++  eg-&gt;connection-&gt;send_keep_alive = ap-&gt;send_keep_alive;
++  eg-&gt;connection-&gt;auto_connect = ap-&gt;auto_connect;
++  eg-&gt;connection-&gt;auto_reconnect = ap-&gt;auto_reconnect;
++
++  return eg;
++}
+
+Modified: src/core/eim.h
+===================================================================
+--- src/core/eim.h	2005-06-02 22:39:56 UTC (rev 36)
++++ src/core/eim.h	2005-07-24 18:03:27 UTC (rev 37)
+@@ -5,8 +5,8 @@
+ #include &lt;Ecore_Data.h&gt;
+ 
+ #include &quot;egxp/egxp.h&quot;
++#include &quot;account_properties.h&quot;
+ 
+-
+ typedef struct _Eim Eim;
+ #define EIM(o) ((Eim*)o)
+ 
+@@ -14,6 +14,9 @@
+   /* need to keep a list of Egxp Structure */
+   Ecore_List * egxps;
+ 
++  /* contains all accounts properties */
++  Ecore_List * account_properties;
++  
+ };
+ 
+ 
+@@ -37,4 +40,10 @@
+ void eim_free (Eim *e);
+ 
+ 
++/**
++ * Initialize the Egxp from an account properties
++ */
++Egxp * eim_create_egxp_from (AccountProperties * ap);
++
++
+ #endif
+
+Modified: src/egxp/egxp_connection.c
+===================================================================
+--- src/egxp/egxp_connection.c	2005-06-02 22:39:56 UTC (rev 36)
++++ src/egxp/egxp_connection.c	2005-07-24 18:03:27 UTC (rev 37)
+@@ -35,9 +35,21 @@
+  
+   tmp-&gt;server = NULL;
+   tmp-&gt;host_addr = strdup (address);
+-  tmp-&gt;use_ssl = use_ssl;
++
++  /* if port equals to zero, set a default port */
++  if( port == 0) {
++    if(use_ssl) port = 5223;
++    else port = 5222;
++  }
++  
+   tmp-&gt;port = port;
+   
++  tmp-&gt;use_ssl = use_ssl;
++  tmp-&gt;ignore_ssl_warning = 0;
++  tmp-&gt;send_keep_alive = 0;
++  tmp-&gt;auto_connect = 0;
++  tmp-&gt;auto_reconnect = 0;
++
+   return tmp;
+ }
+ 
+
+Modified: src/egxp/egxp_connection.h
+===================================================================
+--- src/egxp/egxp_connection.h	2005-06-02 22:39:56 UTC (rev 36)
++++ src/egxp/egxp_connection.h	2005-07-24 18:03:27 UTC (rev 37)
+@@ -38,11 +38,23 @@
+   /* address to the host */
+   char * host_addr;
+ 
++  /* the port to connect */
++  unsigned int port;
++
+   /* a flag to know if we use ssl connection */
+   unsigned char use_ssl;
+   
+-  /* the port to connect */
+-  unsigned int port;
++  /* ignore ssl warning */
++  unsigned char ignore_ssl_warning;
++
++  /* if we need to send a keep alive packet*/
++  unsigned char send_keep_alive;
++
++  /* if we need to connect on startup */
++  unsigned char auto_connect;
++
++  /* when there is a disconnection, try to reconnect */
++  unsigned char auto_reconnect;
+ };
+ 
+ 
+
+Modified: src/gui/gui_main.c
+===================================================================
+--- src/gui/gui_main.c	2005-06-02 22:39:56 UTC (rev 36)
++++ src/gui/gui_main.c	2005-07-24 18:03:27 UTC (rev 37)
+@@ -103,7 +103,8 @@
+   /* remove border */
+   //  ecore_evas_borderless_set (ee, 1);
+   /* define the window on the below level layer */
+-  ecore_x_window_prop_layer_set(win, ECORE_X_WINDOW_LAYER_BELOW);
++  //ecore_x_window_prop_layer_set(win, ECORE_X_WINDOW_LAYER_BELOW);
++
+   /* define callback */
+   ecore_evas_callback_resize_set(ee, gui_main_resize_cb);
+   ecore_evas_callback_move_set(ee, gui_main_move_cb);
+@@ -237,12 +238,6 @@
+   Ewl_Widget     * box_item = NULL;
+   Ewl_Widget     * menu;
+   
+-
+-  
+-
+-
+-
+-
+   /* create the main windows */
+   main_win = ewl_window_new();
+   
+@@ -274,11 +269,12 @@
+ 
+   /* create the menu */
+   menu = create_menu (main_win);
+-  
++  ewl_callback_append(tree, EWL_CALLBACK_MOUSE_DOWN, item_cb, menu);
++
+   /* Add an item */
+-  create_tree_item (tree, NULL, &quot;entry 1&quot;, menu);
+-  create_tree_item (tree, NULL, &quot;entry 2&quot;, menu);
+-  create_tree_item (tree, NULL, &quot;entry 3&quot;, menu);
++  // create_tree_item (tree, NULL, &quot;entry 1&quot;, menu);
++  // create_tree_item (tree, NULL, &quot;entry 2&quot;, menu);
++  // create_tree_item (tree, NULL, &quot;entry 3&quot;, menu);
+ 
+   /* test properties windows */
+   /*  main_win = create_properties_dialog (NULL);
+
+Modified: src/xmpp/xmpp_jid.c
+===================================================================
+--- src/xmpp/xmpp_jid.c	2005-06-02 22:39:56 UTC (rev 36)
++++ src/xmpp/xmpp_jid.c	2005-07-24 18:03:27 UTC (rev 37)
+@@ -164,3 +164,12 @@
+   assert (jid);
+   return jid-&gt;user != NULL;
+ }
++
++
++void xmpp_jid_set_resource (Xmpp_JID * jid, char * resource) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_jid_set_resource\n&quot;);
++#endif 
++  IF_FREE (jid-&gt;resource);
++  jid-&gt;resource = strdup (resource);
++}
+
+Modified: src/xmpp/xmpp_jid.h
+===================================================================
+--- src/xmpp/xmpp_jid.h	2005-06-02 22:39:56 UTC (rev 36)
++++ src/xmpp/xmpp_jid.h	2005-07-24 18:03:27 UTC (rev 37)
+@@ -76,4 +76,14 @@
+  * @return true if a user is set, false otherwise.
+  */
+ unsigned int xmpp_jid_has_user (Xmpp_JID * jid);
++
++
++/**
++ * Set the resource to the structure
++ * @param jid: the Xmpp_JID resource
++ * @param resource: the resource name
++ */
++void xmpp_jid_set_resource (Xmpp_JID * jid, char * resource); 
++
++
+ #endif
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#33">[ date ]</a>
+              <a href="thread.html#33">[ thread ]</a>
+              <a href="subject.html#33">[ subject ]</a>
+              <a href="author.html#33">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

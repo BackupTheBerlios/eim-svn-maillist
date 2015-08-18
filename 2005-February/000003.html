@@ -1,0 +1,1006 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r7 - / src/egxp
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-February/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r7%20-%20/%20src/egxp&In-Reply-To=%3C200502092116.j19LGCQg024912%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000002.html">
+   <LINK REL="Next"  HREF="000004.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r7 - / src/egxp</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r7%20-%20/%20src/egxp&In-Reply-To=%3C200502092116.j19LGCQg024912%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r7 - / src/egxp">jol at sheep.berlios.de
+       </A><BR>
+    <I>Wed Feb  9 22:16:12 CET 2005</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000002.html">[Eim-svn] r6 - / src/egxp
+</A></li>
+        <LI>Next message: <A HREF="000004.html">[Eim-svn] r8 - / src/egxp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3">[ date ]</a>
+              <a href="thread.html#3">[ thread ]</a>
+              <a href="subject.html#3">[ subject ]</a>
+              <a href="author.html#3">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-02-09 22:16:10 +0100 (Wed, 09 Feb 2005)
+New Revision: 7
+
+Removed:
+   src/egxp/egxp_child_node.c
+   src/egxp/egxp_child_node.h
+   src/egxp/egxp_conditional_node.c
+   src/egxp/egxp_conditional_node.h
+Modified:
+   ChangeLog
+   TODO
+   src/egxp/Makefile.am
+   src/egxp/egxp.c
+   src/egxp/egxp.h
+   src/egxp/egxp_condition.c
+   src/egxp/egxp_condition.h
+   src/egxp/egxp_node.c
+   src/egxp/egxp_node.h
+   src/egxp/egxp_node_struct.h
+   src/egxp/egxp_opcode.c
+   src/egxp/egxp_protocol_handler.c
+   src/egxp/egxp_protocol_handler.h
+   src/egxp/test.c
+Log:
+- Remove all complexe stuff, in fact i've remove child* and conditional* because they were too much complexe. I've replaced all the stuff in a simple structure
+- During the Egxp_Opcode creation add automaticly the __ROOT__ opcode. It will be used by the egxp as initial node.
+- During the Egxp creation add a root node __ROOT__
+
+
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-02-07 22:52:12 UTC (rev 6)
++++ ChangeLog	2005-02-09 21:16:10 UTC (rev 7)
+@@ -1,3 +1,11 @@
++2005-02-09(jol):
++	- Remove all complexe stuff, in fact i've remove child* and conditional* because they were too much complexe. I've replaced
++	all the stuff in a simple structure.
++
++2005-02-08(jol):
++	- During the Egxp_Opcode creation add automaticly the __ROOT__ opcode. It will be used by the egxp as initial node.
++	- During the Egxp creation add a root node __ROOT__
++	
+ 2005-02-07(jol):
+ 	- do not return pointer with egxp_opcode_get_id
+ 	- add functions to egxp_conditional_node with some helper function
+
+Modified: TODO
+===================================================================
+--- TODO	2005-02-07 22:52:12 UTC (rev 6)
++++ TODO	2005-02-09 21:16:10 UTC (rev 7)
+@@ -1,3 +1,3 @@
+ - Change the Egxp_ChildNode to Egxp_BaseNode
+ - Egxp_Node must inherit from Egxp_BaseNode
+-- Continue the ProtocolHandler stuff
++- Should change the egxp_message to handle integer tag instead of char * tag.
+
+Modified: src/egxp/Makefile.am
+===================================================================
+--- src/egxp/Makefile.am	2005-02-07 22:52:12 UTC (rev 6)
++++ src/egxp/Makefile.am	2005-02-09 21:16:10 UTC (rev 7)
+@@ -13,22 +13,18 @@
+ 	egxp_condition.h     \
+ 	egxp_message.h       \
+ 	egxp_node_struct.h   \
+-	egxp_child_node.h    \
+ 	egxp_node.h          \
+ 	egxp_opcode.h        \
+ 	egxp.h               \
+-	egxp_conditional_node.h \
+ 	egxp_protocol_handler.h
+ 
+ 
+ libegxp_la_SOURCES = \
+ 	egxp_condition.c    \
+ 	egxp_message.c      \
+-	egxp_child_node.c   \
+ 	egxp_node.c         \
+ 	egxp_opcode.c       \
+ 	egxp.c              \
+-	egxp_conditional_node.c \
+ 	egxp_protocol_handler.c
+ 
+ libegxp_la_LIBADD = $(ecore_libs) $(IDN_LIBS) $(EXPAT_LIB)
+
+Modified: src/egxp/egxp.c
+===================================================================
+--- src/egxp/egxp.c	2005-02-07 22:52:12 UTC (rev 6)
++++ src/egxp/egxp.c	2005-02-09 21:16:10 UTC (rev 7)
+@@ -32,14 +32,16 @@
+   tmp-&gt;opcodes = egxp_opcode_new ();
+   
+   /* the root of the protocol */
+-  tmp-&gt;root = NULL;
++  tmp-&gt;root = egxp_node_new (egxp_opcode_get_id (tmp-&gt;opcodes, 
++						      &quot;__ROOT__&quot;));
+   
++  
+   /* initialize the user data */
+   tmp-&gt;user_data = NULL;
+   
+   /* define the protocol handler */
+   tmp-&gt;protocol_handler = egxp_protocol_handler_new (tmp);
+-
++  
+   return tmp;
+ }
+ 
+
+Modified: src/egxp/egxp.h
+===================================================================
+--- src/egxp/egxp.h	2005-02-07 22:52:12 UTC (rev 6)
++++ src/egxp/egxp.h	2005-02-09 21:16:10 UTC (rev 7)
+@@ -23,12 +23,10 @@
+ #define egxp_header_h_
+ 
+ #include &quot;egxp_node_struct.h&quot;
+-#include &quot;egxp_child_node.h&quot;
+ #include &quot;egxp_node.h&quot;
+ #include &quot;egxp_opcode.h&quot;
+ #include &quot;egxp_condition.h&quot;
+ #include &quot;egxp_message.h&quot;
+-#include &quot;egxp_conditional_node.h&quot;
+ #include &quot;egxp_protocol_handler.h&quot;
+ 
+ 
+
+Deleted: src/egxp/egxp_child_node.c
+===================================================================
+--- src/egxp/egxp_child_node.c	2005-02-07 22:52:12 UTC (rev 6)
++++ src/egxp/egxp_child_node.c	2005-02-09 21:16:10 UTC (rev 7)
+@@ -1,69 +0,0 @@
+-/*
+-   $Id$
+-
+-   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
+-   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
+-
+-   Eim is free software; you can redistribute it and/or modify
+-   it under the terms of the GNU General Public License as published by
+-   the Free Software Foundation; either version 2 of the License, or
+-   (at your option) any later version.
+-
+-   Eim is distributed in the hope that it will be useful,
+-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-   GNU General Public License for more details.
+-
+-   You should have received a copy of the GNU General Public License
+-   along with Eim; if not, write to the Free Software
+-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+-*/
+-#include &lt;assert.h&gt;
+-#include &lt;stdlib.h&gt;
+-
+-#include &lt;Ecore_Data.h&gt;
+-
+-#include &quot;egxp_node.h&quot;
+-#include &quot;egxp_child_node.h&quot;
+-
+-Egxp_ChildNode * egxp_child_node_new () {
+-#ifdef EGXP_DEBUG
+-  printf(&quot;TRACE: egxp_child_node_new\n&quot;);
+-#endif
+-  
+-  Egxp_ChildNode * tmp = EGXP_CHILDNODE(malloc(sizeof(Egxp_ChildNode)));
+-  tmp-&gt;begin_func = NULL;
+-  tmp-&gt;end_func = NULL;
+-  tmp-&gt;childs = NULL;
+-  
+-  return tmp;
+-}
+-
+-
+-void egxp_child_node_free (Egxp_ChildNode * cn) {
+-#ifdef EGXP_DEBUG
+-  printf(&quot;TRACE: egxp_child_node_free\n&quot;);
+-#endif
+-
+-  assert(cn != NULL);
+-  if (cn-&gt;childs) ecore_hash_destroy (cn-&gt;childs);
+-  free (cn);
+-}
+-
+-
+-void egxp_child_node_add_node (Egxp_ChildNode * cn, Egxp_Node * c) {
+-#ifdef EGXP_DEBUG
+-  printf(&quot;TRACE: egxp_child_node_add_node\n&quot;);
+-#endif
+-
+-  assert (cn &amp;&amp; c);
+-
+-  /* if not defined we create it */
+-  if (cn-&gt;childs == NULL) {
+-    cn-&gt;childs = ecore_hash_new (ecore_direct_hash, ecore_direct_compare);
+-    ecore_hash_set_free_value (cn-&gt;childs, (Ecore_Free_Cb)egxp_node_free);
+-  }
+-  
+-  /* so now we can add it */
+-  ecore_hash_set (cn-&gt;childs, &amp;c-&gt;tag, c);
+-}
+
+Deleted: src/egxp/egxp_child_node.h
+===================================================================
+--- src/egxp/egxp_child_node.h	2005-02-07 22:52:12 UTC (rev 6)
++++ src/egxp/egxp_child_node.h	2005-02-09 21:16:10 UTC (rev 7)
+@@ -1,47 +0,0 @@
+-/*
+-   $Id$
+-
+-   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
+-   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
+-
+-   Eim is free software; you can redistribute it and/or modify
+-   it under the terms of the GNU General Public License as published by
+-   the Free Software Foundation; either version 2 of the License, or
+-   (at your option) any later version.
+-
+-   Eim is distributed in the hope that it will be useful,
+-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-   GNU General Public License for more details.
+-
+-   You should have received a copy of the GNU General Public License
+-   along with Eim; if not, write to the Free Software
+-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+-*/
+-#ifndef egxp_childnode_header_h_
+-#define egxp_childnode_header_h_
+-
+-#include &quot;egxp_node_struct.h&quot;
+-
+-/**
+- * Create an initialize a new child node
+- */
+-Egxp_ChildNode * egxp_child_node_new ();
+-
+-
+-/**
+- * Free a child node
+- */
+-void egxp_child_node_free (Egxp_ChildNode * cn);
+-
+-
+-/**
+- * Add a node to the child node.
+- *  - if the hash map is not allocated we initialize it.
+- * @param cn: the child node
+- * @param c: the node to add in the hash list
+- */
+-void egxp_child_node_add_node (Egxp_ChildNode * cn, Egxp_Node * c);
+-
+-
+-#endif
+
+Modified: src/egxp/egxp_condition.c
+===================================================================
+--- src/egxp/egxp_condition.c	2005-02-07 22:52:12 UTC (rev 6)
++++ src/egxp/egxp_condition.c	2005-02-09 21:16:10 UTC (rev 7)
+@@ -44,7 +44,7 @@
+ }
+ 
+ 
+-unsigned char egxp_condition_equals (Egxp_Condition * condition, const unsigned int key, const unsigned int value) {
++unsigned char egxp_condition_equals (Egxp_Condition * condition, const int key, const int value) {
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_condition_equals\n&quot;);
+ #endif
+
+Modified: src/egxp/egxp_condition.h
+===================================================================
+--- src/egxp/egxp_condition.h	2005-02-07 22:52:12 UTC (rev 6)
++++ src/egxp/egxp_condition.h	2005-02-09 21:16:10 UTC (rev 7)
+@@ -38,7 +38,7 @@
+ /**
+  * Test if the EgxpCondition is equal to the id and the value
+  */
+-unsigned char egxp_condition_equals (Egxp_Condition * condition, const unsigned int key, const unsigned int value);
++unsigned char egxp_condition_equals (Egxp_Condition * condition, const int key, const int value);
+ 
+  
+ #endif
+
+Deleted: src/egxp/egxp_conditional_node.c
+===================================================================
+--- src/egxp/egxp_conditional_node.c	2005-02-07 22:52:12 UTC (rev 6)
++++ src/egxp/egxp_conditional_node.c	2005-02-09 21:16:10 UTC (rev 7)
+@@ -1,118 +0,0 @@
+-/*
+-   $Id$
+-
+-   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
+-   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
+-
+-   Eim is free software; you can redistribute it and/or modify
+-   it under the terms of the GNU General Public License as published by
+-   the Free Software Foundation; either version 2 of the License, or
+-   (at your option) any later version.
+-
+-   Eim is distributed in the hope that it will be useful,
+-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-   GNU General Public License for more details.
+-
+-   You should have received a copy of the GNU General Public License
+-   along with Eim; if not, write to the Free Software
+-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+-*/
+-#include &lt;assert.h&gt;
+-#include &lt;stdlib.h&gt;
+-#include &lt;Ecore_Data.h&gt;
+-
+-#include &quot;egxp_child_node.h&quot;
+-#include &quot;egxp_node.h&quot;
+-#include &quot;egxp_conditional_node.h&quot;
+-
+-Egxp_ConditionalNode * egxp_conditional_node_new (Egxp_Node * parent) {
+-#ifdef EGXP_DEBUG
+-  printf(&quot;TRACE: egxp_conditional_node_new\n&quot;);
+-#endif
+-  assert (parent);
+-  
+-  /* create and initialize the structure */
+-  Egxp_ConditionalNode * tmp = EGXP_CONDITIONALNODE(malloc (sizeof(Egxp_ConditionalNode)));
+-  tmp-&gt;parent = parent;
+-  tmp-&gt;conditions = NULL;
+-  tmp-&gt;child = NULL;
+-  
+-  /* add this conditional node to the parent */
+-  egxp_node_add_conditional_node (tmp-&gt;parent, tmp);
+-  
+-
+-  return tmp;
+-}
+-
+-
+-Egxp_ConditionalNode * egxp_conditional_node_new_with_condition (Egxp_Node * parent, Egxp_Condition * cond) {
+-#ifdef EGXP_DEBUG
+-  printf(&quot;TRACE: egxp_conditional_node_new_with_condition\n&quot;);
+-#endif
+-  assert(parent &amp;&amp; cond);
+-
+-  Egxp_ConditionalNode * tmp = egxp_conditional_node_new (parent);
+-  egxp_conditional_node_add_condition (tmp, cond);
+-  
+-  return tmp;
+-}
+-
+-void egxp_conditional_node_free (Egxp_ConditionalNode * c) {
+-#ifdef EGXP_DEBUG
+-  printf(&quot;TRACE: egxp_conditional_node_free\n&quot;);
+-#endif
+-  assert (c);
+-  
+-  /* free the structure */
+-  if (c-&gt;child) egxp_child_node_free (c-&gt;child);
+-  if (c-&gt;conditions) ecore_list_destroy (c-&gt;conditions);
+-  free (c);
+-}
+-
+-
+-void egxp_conditional_node_add_condition (Egxp_ConditionalNode * cn, Egxp_Condition * cond) {
+-#ifdef EGXP_DEBUG
+-  printf(&quot;TRACE: egxp_conditional_node_add_condition\n&quot;);
+-#endif
+-  
+-  assert (cn &amp;&amp; cond);
+-  
+-  /* check if the conditions lists is created */
+-  if (cn-&gt;conditions == NULL) {
+-    cn-&gt;conditions = ecore_list_new ();
+-    ecore_list_set_free_cb (cn-&gt;conditions, free);
+-  }
+-  
+-  /* append the condition */
+-  ecore_list_append (cn-&gt;conditions, cond);
+-}
+-
+-void egxp_conditional_node_set_cb (Egxp_ConditionalNode * n, egxp_callback_ptr * begin, egxp_callback_ptr * end) {
+-  #ifdef EGXP_DEBUG
+-  printf(&quot;TRACE: egxp_conditional_node_set_callback\n&quot;);
+-#endif 
+-
+-  assert (n);
+-  
+-  /* check if the child node is created */
+-  if (n-&gt;child == NULL) n-&gt;child = egxp_child_node_new ();
+-  
+-  /* set the attributes */
+-  n-&gt;child-&gt;begin_func = begin;
+-  n-&gt;child-&gt;end_func = end;
+-}
+-
+-
+-void egxp_conditional_node_add_child_node (Egxp_ConditionalNode * parent, Egxp_Node * child) {
+-#ifdef EGXP_DEBUG
+-  printf(&quot;TRACE: egxp_conditional_node_add_child_node\n&quot;);
+-#endif
+-  assert (parent &amp;&amp; child);
+-
+-  /* check if the child node is created */
+-  if (parent-&gt;child == NULL) parent-&gt;child = egxp_child_node_new ();
+-
+-  /* add the node to the child element */
+-  egxp_child_node_add_node (parent-&gt;child, child);
+-}
+
+Deleted: src/egxp/egxp_conditional_node.h
+===================================================================
+--- src/egxp/egxp_conditional_node.h	2005-02-07 22:52:12 UTC (rev 6)
++++ src/egxp/egxp_conditional_node.h	2005-02-09 21:16:10 UTC (rev 7)
+@@ -1,67 +0,0 @@
+-/*
+-   $Id$
+-
+-   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
+-   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
+-
+-   Eim is free software; you can redistribute it and/or modify
+-   it under the terms of the GNU General Public License as published by
+-   the Free Software Foundation; either version 2 of the License, or
+-   (at your option) any later version.
+-
+-   Eim is distributed in the hope that it will be useful,
+-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-   GNU General Public License for more details.
+-
+-   You should have received a copy of the GNU General Public License
+-   along with Eim; if not, write to the Free Software
+-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+-*/
+-#ifndef egxp_conditional_node_header_h_
+-#define egxp_conditional_node_header_h_
+-
+-#include &quot;egxp_node_struct.h&quot;
+-
+-
+-/**
+- * Initialize a conditional node.
+- *  - you need to specify the parent.
+- * @param parent: The &quot;parent&quot;
+- */
+-Egxp_ConditionalNode * egxp_conditional_node_new (Egxp_Node * parent);
+-
+-Egxp_ConditionalNode * egxp_conditional_node_new_with_condition (Egxp_Node * parent, Egxp_Condition * cond);
+-
+-
+-/**
+- * Free the memory of the ConditionalNode Structure
+- */
+-void egxp_conditional_node_free (Egxp_ConditionalNode * c);
+-
+-
+-/**
+- * Add a condition to the condition list
+- * - If the condition list is not created, we create it.
+- * @param cn: the conditional node
+- * @param cond: the condition to add
+- */
+-void egxp_conditional_node_add_condition (Egxp_ConditionalNode * cn, Egxp_Condition * cond);
+-
+-
+-/**
+- * Add the callback function to the node
+- * @param begin:
+- * @param end:
+- */
+-void egxp_conditional_node_set_cb (Egxp_ConditionalNode * n, egxp_callback_ptr * begin, egxp_callback_ptr * end);
+-
+-
+-/**
+- * Add a node to the node
+- * @param parent: the parent node
+- * @param end: the child node
+- */
+-void egxp_conditional_node_add_child_node (Egxp_ConditionalNode * parent, Egxp_Node * child);
+-
+-#endif
+
+Modified: src/egxp/egxp_node.c
+===================================================================
+--- src/egxp/egxp_node.c	2005-02-07 22:52:12 UTC (rev 6)
++++ src/egxp/egxp_node.c	2005-02-09 21:16:10 UTC (rev 7)
+@@ -24,79 +24,105 @@
+ 
+ #include &lt;Ecore_Data.h&gt;
+ 
+-#include &quot;egxp_child_node.h&quot;
+-#include &quot;egxp_conditional_node.h&quot;
++#include &quot;egxp_condition.h&quot;
+ #include &quot;egxp_node.h&quot;
+ 
+-Egxp_Node * egxp_node_new (const unsigned int tag) {
++
++Egxp_Node * egxp_node_new (const int tag) {
+ #ifdef EGXP_DEBUG
+-  printf(&quot;TRACE: egxp_node_new\n&quot;);
++  printf(&quot;TRACE: egxp_node__base_new\n&quot;);
+ #endif 
+ 
+   Egxp_Node * tmp = EGXP_NODE(malloc(sizeof(Egxp_Node)));
+   
++  /* initialize the node */
+   tmp-&gt;tag = tag;
++  tmp-&gt;parent = NULL;
+   
+-  tmp-&gt;child = NULL;
++  tmp-&gt;begin_cb = NULL;
++  tmp-&gt;end_cb = NULL;
++  
+   tmp-&gt;conditions = NULL;
+   
++  tmp-&gt;childs = NULL;
++  
+   return tmp;
+ }
+ 
+ 
+-void egxp_node_free (Egxp_Node *n) {
++
++void egxp_node_free (Egxp_Node * n) {
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_node_free\n&quot;);
+ #endif 
+-
+   assert (n);
+   
+-  if (n-&gt;child) egxp_child_node_free (n-&gt;child);
+-  if (n-&gt;conditions) ecore_list_destroy (n-&gt;conditions);
++  if (n-&gt;conditions) ecore_hash_destroy (n-&gt;conditions);
++  if (n-&gt;childs) ecore_hash_destroy (n-&gt;childs);
+   free (n);
+ }
+ 
+ 
++
+ void egxp_node_set_cb (Egxp_Node * n, egxp_callback_ptr * begin, egxp_callback_ptr * end) {
+ #ifdef EGXP_DEBUG
+-  printf(&quot;TRACE: egxp_node_set_callback\n&quot;);
++  printf(&quot;TRACE: egxp_node_set_cb\n&quot;);
+ #endif 
+-
++  
+   assert (n);
+   
+-  /* check if the child node is created */
+-  if (n-&gt;child == NULL) n-&gt;child = egxp_child_node_new ();
+-  
+   /* set the attributes */
+-  n-&gt;child-&gt;begin_func = begin;
+-  n-&gt;child-&gt;end_func = end;
++  n-&gt;begin_cb = begin;
++  n-&gt;end_cb = end;
+ }
+ 
+ 
+-void egxp_node_add_child_node (Egxp_Node * parent, Egxp_Node * child) {
++void egxp_node_add_condition (Egxp_Node * cn, Egxp_Condition * cond) {
+ #ifdef EGXP_DEBUG
+-  printf(&quot;TRACE: egxp_node_add_child_node\n&quot;);
++  printf(&quot;TRACE: egxp_node_add_condition\n&quot;);
+ #endif
+-  assert (parent &amp;&amp; child);
+-
+-  /* check if the child node is created */
+-  if (parent-&gt;child == NULL) parent-&gt;child = egxp_child_node_new ();
+-
+-  /* add the node to the child element */
+-  egxp_child_node_add_node (parent-&gt;child, child);  
++  
++  assert (cn &amp;&amp; cond);
++  
++  /* check if the conditions lists is created */
++  if (cn-&gt;conditions == NULL) {
++    cn-&gt;conditions = ecore_hash_new (ecore_direct_hash, ecore_direct_compare);
++    ecore_hash_set_free_value (cn-&gt;conditions, (Ecore_Free_Cb)egxp_condition_free);
++  }
++  
++  /* append the condition */
++  ecore_hash_set (cn-&gt;conditions, (int*)cond-&gt;key, cond);
+ }
+ 
+ 
+-void egxp_node_add_conditional_node (Egxp_Node * parent, Egxp_ConditionalNode * child) {
++void egxp_node_add_child (Egxp_Node * parent, Egxp_Node * child) {
+ #ifdef EGXP_DEBUG
+-  printf(&quot;TRACE: egxp_node_add_conditional_node\n&quot;);
++  printf(&quot;TRACE: egxp_node_add_child\n&quot;);
+ #endif
++  
+   assert (parent &amp;&amp; child);
+ 
+-  if (parent-&gt;conditions == NULL) {
+-    parent-&gt;conditions = ecore_list_new ();
+-    ecore_list_set_free_cb (parent-&gt;conditions, egxp_conditional_node_free);
++  if (parent-&gt;childs == NULL) {
++    /* create a hash */
++    parent-&gt;childs = ecore_hash_new (ecore_direct_hash, ecore_direct_compare);
++    /* destroy each element */
++    ecore_hash_set_free_value (parent-&gt;childs, (Ecore_Free_Cb)ecore_list_destroy);
+   }
+   
+-  ecore_list_append (parent-&gt;conditions, child);
++  /* try to get the list for the special tag */
++  Ecore_List * ltmp = ecore_hash_get (parent-&gt;childs, (int*)child-&gt;tag);
++  
++  if (ltmp == NULL) {
++    /* doesn't exist, so create it */
++    ltmp = ecore_list_new ();
++    ecore_list_set_free_cb (ltmp,(Ecore_Free_Cb)egxp_node_free);
++    
++    /* append the list to the hash, hash is indexed by the tag id */
++    ecore_hash_set (parent-&gt;childs, (int*)child-&gt;tag, ltmp);
++  }
++  
++  /* now append the child to the list */
++  ecore_list_append (ltmp, child);
++  /* set the parent for the child */
++  child-&gt;parent = parent;
+ }
+
+Modified: src/egxp/egxp_node.h
+===================================================================
+--- src/egxp/egxp_node.h	2005-02-07 22:52:12 UTC (rev 6)
++++ src/egxp/egxp_node.h	2005-02-09 21:16:10 UTC (rev 7)
+@@ -23,42 +23,19 @@
+ 
+ #include &quot;egxp_node_struct.h&quot;
+ 
++/****************************************************************/
++/****************************************************************/
++/****************************************************************/
++Egxp_Node * egxp_node_new (const int tag);
+ 
+-/**
+- * Create an initialize the structure
+- * @param tag: the id of this node
+- */
+-Egxp_Node * egxp_node_new (const unsigned int tag);
++void egxp_node_free (Egxp_Node * n);
+ 
+-
+-/**
+- * Free the memory ...
+- */
+-void egxp_node_free (Egxp_Node *n);
+-
+-
+-/**
+- * Add the callback function to the node
+- * @param begin:
+- * @param end:
+- */
+ void egxp_node_set_cb (Egxp_Node * n, egxp_callback_ptr * begin, egxp_callback_ptr * end);
+ 
+ 
+-/**
+- * Add a node to the node
+- * @param parent: the parent node
+- * @param end: the child node
+- */
+-void egxp_node_add_child_node (Egxp_Node * parent, Egxp_Node * child);
++void egxp_node_add_condition (Egxp_Node* cn, Egxp_Condition * cond);
+ 
+ 
+-/**
+- * Add a Conditional node to the node
+- * @param parent: the parent node
+- * @param end: the child node
+- */
+-void egxp_node_add_conditional_node (Egxp_Node * parent, Egxp_ConditionalNode * child);
++void egxp_node_add_child (Egxp_Node * parent, Egxp_Node * child);
+ 
+-
+ #endif
+
+Modified: src/egxp/egxp_node_struct.h
+===================================================================
+--- src/egxp/egxp_node_struct.h	2005-02-07 22:52:12 UTC (rev 6)
++++ src/egxp/egxp_node_struct.h	2005-02-09 21:16:10 UTC (rev 7)
+@@ -32,49 +32,36 @@
+ typedef void (*egxp_callback_ptr)(Egxp_Message *, void*);
+ 
+ 
+-typedef struct _Egxp_ChildNode Egxp_ChildNode;
+-#define EGXP_CHILDNODE(o) ((Egxp_ChildNode*)o)
+-struct _Egxp_ChildNode {
+-  Ecore_Hash * childs; /* hash map, the key is the tag, value is a Egxp node */
+ 
+-  egxp_callback_ptr * begin_func; /* called when the start tag appears */
+-  egxp_callback_ptr * end_func;   /* called when the end tag appears */
++typedef struct _Egxp_Condition Egxp_Condition;
++#define EGXP_CONDITION(o) ((Egxp_Condition*)o)
++struct _Egxp_Condition {
++  unsigned int key; /* the id of the key */
++  unsigned int value; /* the id of the value */
+ };
+ 
+ 
+ /**
+- * This is the main structure of Egxp. This structure keeps the tag id.
++ * This structure is really more simple
+  */
+ typedef struct _Egxp_Node Egxp_Node;
+ #define EGXP_NODE(o) ((Egxp_Node*)o)
+ struct _Egxp_Node {
+-  Egxp_ChildNode * child; /* this is a pointer on a child, it's used when no specific condition
+-			     are specified */
++  /* the tag */
++  int tag;
+   
+-  unsigned int tag; /* this is the id of the tag */
++  /* the parent */
++  Egxp_Node * parent;
+   
+-  Ecore_List * conditions; /* this is a list of conditionnal Node attributes -&gt; epgx_conditional node */
+-};
+-
+-
+-typedef struct _Egxp_Condition Egxp_Condition;
+-#define EGXP_CONDITION(o) ((Egxp_Condition*)o)
+-struct _Egxp_Condition {
+-  unsigned int key; /* the id of the key */
+-  unsigned int value; /* the id of the value */
+-};
+-
+-
+-
+-typedef struct _Egxp_ConditionalNode Egxp_ConditionalNode;
+-#define EGXP_CONDITIONALNODE(o) ((Egxp_ConditionalNode*)o)
+-struct _Egxp_ConditionalNode {
+-  Egxp_ChildNode * child;
++  /* the callback */
++  egxp_callback_ptr * begin_cb;
++  egxp_callback_ptr * end_cb; 
+   
+-  Egxp_Node * parent; /* the parent of this node, it's necessary to know the tag, but maybe 
+-			 useless ... */
++  /* conditions are inside a hash */
++  Ecore_Hash * conditions;
+   
+-  Ecore_List * conditions; /* this is the list of the condition */
++  /* the child. It's a hash&lt;tag_id, list&lt;Egxp_NodeBase*&gt;&gt; */
++  Ecore_Hash * childs;
+ };
+ 
+ #endif
+
+Modified: src/egxp/egxp_opcode.c
+===================================================================
+--- src/egxp/egxp_opcode.c	2005-02-07 22:52:12 UTC (rev 6)
++++ src/egxp/egxp_opcode.c	2005-02-09 21:16:10 UTC (rev 7)
+@@ -38,6 +38,9 @@
+   tmp-&gt;id = 0;
+   tmp-&gt;need_update = 0;
+ 
++  /* add automaticly the __ROOT__ element */
++  egxp_opcode_add (tmp, &quot;__ROOT__&quot;);
++    
+   return tmp;
+ }
+ 
+
+Modified: src/egxp/egxp_protocol_handler.c
+===================================================================
+--- src/egxp/egxp_protocol_handler.c	2005-02-07 22:52:12 UTC (rev 6)
++++ src/egxp/egxp_protocol_handler.c	2005-02-09 21:16:10 UTC (rev 7)
+@@ -49,6 +49,9 @@
+ 			egxp_protocol_handler_start_element, 
+ 			egxp_protocol_handler_end_element);
+   XML_SetCharacterDataHandler(tmp-&gt;parser,  egxp_protocol_handler_char_data);
++
++  /* initialize the protocol stack */
++  tmp-&gt;protocol_stack = NULL;
+   
+   return tmp;
+ }
+@@ -65,7 +68,7 @@
+ 
+   /* do we need to free the message ? */
+   if (ph-&gt;current_msg) {
+-    // ???
++    egxp_message_free (ph-&gt;current_msg);
+   }
+   
+   free (ph);
+@@ -83,11 +86,71 @@
+ #endif
+   assert (userData &amp;&amp; name);
+   
++  /* cast the egxp variable */
++  Egxp * eg = EGXP (userData);
++  Egxp_ProtocolHandler * ph = eg-&gt;protocol_handler;
++  int i;
++  char use_callback = 0;
++
++  assert (eg &amp;&amp; ph);
++
+   /* really hard stuff here, we need to keep in a stack the protocol evolution
+      in order to call the correct callback */
+ 
+   /* we need to store the message hierarchy here (current_msg) */
+   
++  /* build the message with the specific id */
++  /* NOTE we should update the egxp_message to use integer id */
++  Egxp_Message * message = egxp_message_new ((char*) name);
++  
++  /* process attributes */
++  for (i = 0; atts[i]; i += 2)
++    egxp_message_add_attribute (message,
++				egxp_message_attribute_new((char*)atts[i],(char*) atts[i+1]));
++  
++  /* attach the message */
++  if (ph-&gt;current_msg == NULL) {
++    ph-&gt;current_msg = message;
++  } else {
++    egxp_message_add_child (ph-&gt;current_msg, message);
++    ph-&gt;current_msg = message;
++  }
++
++  /* need to detect which callback to call, if an element in not 
++     inside the protocol */
++  if (ph-&gt;protocol_stack == NULL) {
++    /* if null it's because it's the first time we are here 
++       so we need to check inside  protocol tree if the tag
++       is the root.
++    */
++    assert (eg-&gt;root);
++    
++    if (!strcmp (egxp_opcode_get_string (eg-&gt;opcodes, eg-&gt;root-&gt;tag),
++		 name)) {
++      /* they are equals, we begin :p */
++      ph-&gt;protocol_stack = eg-&gt;root;
++      use_callback = 1;
++    } else {
++      /* seems to be an error */
++    }
++  } else {
++    /* 
++       we check if the protocol_stack element has the name as
++       child node, if the tag name is present we are on the 
++       good way, otherwise it seems that the implementation is 
++       not completed
++    */
++    
++  }
++
++  
++  /*
++    if all is ok, we can call the callback associated to this
++    message (check the use_callback value)
++  */
++  if (use_callback) {
++    assert (ph-&gt;protocol_stack);
++  }
+ }
+ 
+ void egxp_protocol_handler_end_element(void *userData, const char *name) {
+
+Modified: src/egxp/egxp_protocol_handler.h
+===================================================================
+--- src/egxp/egxp_protocol_handler.h	2005-02-07 22:52:12 UTC (rev 6)
++++ src/egxp/egxp_protocol_handler.h	2005-02-09 21:16:10 UTC (rev 7)
+@@ -22,7 +22,9 @@
+ #define egxp_protocol_handler_header_h_
+ 
+ #include &lt;expat.h&gt;
++
+ #include &quot;egxp_message.h&quot;
++#include &quot;egxp_node_struct.h&quot;
+ 
+ struct _Egxp;
+ 
+@@ -35,6 +37,9 @@
+ 
+   /* the XML Parser */
+   XML_Parser parser;
++
++  /* the protocol stack */
++  Egxp_Node * protocol_stack;
+ };
+ 
+ 
+
+Modified: src/egxp/test.c
+===================================================================
+--- src/egxp/test.c	2005-02-07 22:52:12 UTC (rev 6)
++++ src/egxp/test.c	2005-02-09 21:16:10 UTC (rev 7)
+@@ -11,7 +11,6 @@
+   Egxp_Node * n1 = NULL;
+   Egxp_Node * n2 = NULL;
+   Egxp_Node * n3 = NULL;
+-  Egxp_ConditionalNode * c1 = NULL;
+   
+   /* define basics grammar */
+   egxp_opcode_add (ph-&gt;opcodes, &quot;stream&quot;);
+@@ -25,25 +24,27 @@
+ 
+   /* display information about opcode */
+   egxp_opcode_display (ph-&gt;opcodes);
+-
+-  /* define the protocol */
+-  ph-&gt;root = egxp_node_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;stream&quot;));
+   
+-  /* add the iq part as example */
+-  n1 = egxp_node_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;iq&quot;));
+-  egxp_node_add_child_node (ph-&gt;root, n1);
+-  egxp_node_set_cb (n1, NULL, NULL);
+-
+-  /* add iq type = get */
+-  c1 = egxp_conditional_node_new_with_condition (n1, egxp_condition_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;type&quot;),
+-									 egxp_opcode_get_id (ph-&gt;opcodes, &quot;get&quot;)));
+-  egxp_conditional_node_set_cb (c1, NULL, NULL);
++  n1 = egxp_node_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;stream&quot;));
++  egxp_node_add_child (ph-&gt;root, n1);
+   
+-  /* add iq type = set */
+-  c1 = egxp_conditional_node_new_with_condition (n1, egxp_condition_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;type&quot;),
+-									 egxp_opcode_get_id (ph-&gt;opcodes, &quot;set&quot;)));
+-  egxp_conditional_node_set_cb (c1, NULL, NULL);
+-
++  /* add iq tag */
++  n2 = egxp_node_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;iq&quot;));
++  egxp_node_add_child (n1, n2);
++  
++  /* add iq tag + type=set */
++  n2 = egxp_node_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;iq&quot;));
++  egxp_node_add_condition (n2, egxp_condition_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;type&quot;),
++							egxp_opcode_get_id (ph-&gt;opcodes, &quot;set&quot;)));
++  egxp_node_add_child (n1, n2);
++  
++  
++  /* add iq tag + type=get */
++  n2 = egxp_node_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;iq&quot;));
++  egxp_node_add_condition (n2, egxp_condition_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;type&quot;),
++							egxp_opcode_get_id (ph-&gt;opcodes, &quot;get&quot;)));
++  egxp_node_add_child (n1, n2);
++  
+   /* free opcode */
+   egxp_free (ph);
+   
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000002.html">[Eim-svn] r6 - / src/egxp
+</A></li>
+	<LI>Next message: <A HREF="000004.html">[Eim-svn] r8 - / src/egxp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3">[ date ]</a>
+              <a href="thread.html#3">[ thread ]</a>
+              <a href="subject.html#3">[ subject ]</a>
+              <a href="author.html#3">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

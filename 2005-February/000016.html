@@ -1,0 +1,846 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r20 - / src/egxp src/xmpp
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-February/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r20%20-%20/%20src/egxp%20src/xmpp&In-Reply-To=%3C200502202212.j1KMC9iV027255%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000015.html">
+   <LINK REL="Next"  HREF="000017.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r20 - / src/egxp src/xmpp</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r20%20-%20/%20src/egxp%20src/xmpp&In-Reply-To=%3C200502202212.j1KMC9iV027255%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r20 - / src/egxp src/xmpp">jol at sheep.berlios.de
+       </A><BR>
+    <I>Sun Feb 20 23:12:09 CET 2005</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000015.html">[Eim-svn] r19 - src/egxp
+</A></li>
+        <LI>Next message: <A HREF="000017.html">[Eim-svn] r21 - / src/egxp src/xmpp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#16">[ date ]</a>
+              <a href="thread.html#16">[ thread ]</a>
+              <a href="subject.html#16">[ subject ]</a>
+              <a href="author.html#16">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-02-20 23:12:08 +0100 (Sun, 20 Feb 2005)
+New Revision: 20
+
+Added:
+   src/xmpp/sha1.c
+   src/xmpp/sha1.h
+Modified:
+   ChangeLog
+   src/egxp/egxp.c
+   src/egxp/egxp_connection.c
+   src/egxp/egxp_message.c
+   src/egxp/egxp_message.h
+   src/egxp/egxp_protocol_handler.c
+   src/egxp/test.c
+   src/xmpp/Makefile.am
+   src/xmpp/test.c
+   src/xmpp/xmpp_auth.c
+   src/xmpp/xmpp_auth.h
+   src/xmpp/xmpp_opcode.c
+   src/xmpp/xmpp_opcode.h
+Log:
+- add egxp_message_root allowing to get the root message of a message.
+- try to fix memory leaks and a dirty segfault.
+- The segfault is always here i'm hunting it !
+- add sha1 support to use with password.
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-02-18 21:00:04 UTC (rev 19)
++++ ChangeLog	2005-02-20 22:12:08 UTC (rev 20)
+@@ -1,3 +1,9 @@
++2005-02-20(jol):
++	- add egxp_message_root allowing to get the root message of a message.
++	- try to fix memory leaks and a dirty segfault.
++	- The segfault is always here i'm hunting it !
++	- add sha1 support to use with password.
++	
+ 2005-02-19(jol):
+ 	- Fix memory leaks
+ 	- rename egxp_opcode_display to egxp_opcode_print
+
+Modified: src/egxp/egxp.c
+===================================================================
+--- src/egxp/egxp.c	2005-02-18 21:00:04 UTC (rev 19)
++++ src/egxp/egxp.c	2005-02-20 22:12:08 UTC (rev 20)
+@@ -75,7 +75,7 @@
+   if (e-&gt;connection) egxp_connection_free (e-&gt;connection);
+   /* free extension */
+   if (e-&gt;extensions) ecore_hash_destroy (e-&gt;extensions);
+-  free (e);
++  FREE (e);
+ }
+ 
+ 
+
+Modified: src/egxp/egxp_connection.c
+===================================================================
+--- src/egxp/egxp_connection.c	2005-02-18 21:00:04 UTC (rev 19)
++++ src/egxp/egxp_connection.c	2005-02-20 22:12:08 UTC (rev 20)
+@@ -110,7 +110,7 @@
+   if (c-&gt;server) {
+     /* warning FIXME, i don't how close connection work ... */
+     printf(&quot;egxp_connection_disconnect:: FIXME %s\n&quot;, __FILE__);
+-    // ecore_con_server_del (c-&gt;server);
++    ecore_con_server_del (c-&gt;server);
+     c-&gt;server = NULL;
+   }
+ }
+
+Modified: src/egxp/egxp_message.c
+===================================================================
+--- src/egxp/egxp_message.c	2005-02-18 21:00:04 UTC (rev 19)
++++ src/egxp/egxp_message.c	2005-02-20 22:12:08 UTC (rev 20)
+@@ -59,12 +59,12 @@
+ 
+ 
+ void egxp_message_free (Egxp_Message * m) {
++  assert (m);
+ #ifdef EGXP_DEBUG
+-  printf(&quot;TRACE: egxp_message_free\n&quot;);
++  char * debug = strdup (m-&gt;tagname);
++  printf(&quot;TRACE: egxp_message_free -&gt; begin: %s\n&quot;, debug);
+ #endif
+   
+-  assert (m);
+-  
+   FREE (m-&gt;tagname);
+   ecore_list_destroy (m-&gt;attributes);
+   ecore_list_destroy (m-&gt;childs);
+@@ -73,8 +73,15 @@
+   if (m-&gt;parent) {
+     // egxp_message_remove_child (m-&gt;parent, m);
+   }
+-  IF_FREE (m-&gt;data);
++  m-&gt;parent = NULL;
++
++ IF_FREE (m-&gt;data);
+   FREE (m);
++  
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_message_free -&gt; end: %s\n&quot;, debug);
++  FREE (debug);
++#endif
+ }
+ 
+ Egxp_Message * egxp_message_get_child (Egxp_Message *m, char * tagname) {
+@@ -161,7 +168,7 @@
+ 
+   ecore_list_goto_first(m-&gt;childs);
+   Egxp_Message * list_item;
+-  while((list_item = (Egxp_Message*)ecore_list_next(m-&gt;childs)) != NULL) {
++  while((list_item = EGXP_MESSAGE(ecore_list_next(m-&gt;childs))) != NULL) {
+     if (ma == list_item) {
+       ecore_list_remove (m-&gt;childs);
+       return;
+@@ -288,7 +295,7 @@
+     // the termination tag
+     if (endtag) {
+       len = strlen (m-&gt;tagname);
+-      buf_len += len + 3; // &lt;tagname/&gt;
++      buf_len += len + 3; // &lt;/tagname&gt;
+       buf = (char*) realloc (buf, buf_len);
+       buf = strncat (buf, &quot;&lt;/&quot;,2);
+       buf = strncat (buf, m-&gt;tagname, len);
+@@ -309,6 +316,20 @@
+ }
+ 
+ 
++Egxp_Message * egxp_message_root (Egxp_Message * m) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_message_root\n&quot;);
++#endif
++  assert (m != NULL);
++  
++  /* if the parent is null we return this message */
++  if (m-&gt;parent == NULL) return m;
++  /* else we return the root of the parent */
++  return egxp_message_root (m-&gt;parent);
++}
++
++
++
+ unsigned int egxp_message_is_empty (Egxp_Message *m) {
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_message_is_empty\n&quot;);
+@@ -322,6 +343,8 @@
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_message_attribute_new\n&quot;);
+ #endif
++  assert (key &amp;&amp; value);
++  
+   Egxp_MessageAttribute * tmp = (Egxp_MessageAttribute *) malloc (sizeof (Egxp_MessageAttribute));
+   
+   tmp-&gt;key = strdup (key);
+@@ -334,9 +357,9 @@
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_message_attribute_free\n&quot;);
+ #endif
++  
++  assert (ma);
+ 
+-  if (ma == NULL) return;
+-  
+   FREE (ma-&gt;key);
+   FREE (ma-&gt;value);
+   FREE (ma);
+
+Modified: src/egxp/egxp_message.h
+===================================================================
+--- src/egxp/egxp_message.h	2005-02-18 21:00:04 UTC (rev 19)
++++ src/egxp/egxp_message.h	2005-02-20 22:12:08 UTC (rev 20)
+@@ -170,13 +170,22 @@
+  */
+ char * egxp_message_to_xml (Egxp_Message *m, unsigned int endtag);
+ 
++/**
++ * Display the xml representation of the message
++ * @param m: The message to display
++ */
+ void egxp_message_print(Egxp_Message *m);
+ 
++/**
++ * Return the root message.
++ * @param m: a message
++ * @return the root message or null if no message.
++ */
++Egxp_Message * egxp_message_root (Egxp_Message * m);
+ 
+ 
+ 
+ 
+-
+ /**
+  * Create a Egxp_MessageAttribute
+  */
+
+Modified: src/egxp/egxp_protocol_handler.c
+===================================================================
+--- src/egxp/egxp_protocol_handler.c	2005-02-18 21:00:04 UTC (rev 19)
++++ src/egxp/egxp_protocol_handler.c	2005-02-20 22:12:08 UTC (rev 20)
+@@ -32,7 +32,7 @@
+ void egxp_protocol_handler_char_data (void *userData, const XML_Char *s, int len);
+ 
+ 
+-Egxp_ProtocolHandler * egxp_protocol_handler_new (struct _Egxp * e) {
++Egxp_ProtocolHandler * egxp_protocol_handler_new (Egxp * e) {
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_protocol_handler_new\n&quot;);
+ #endif 
+@@ -45,16 +45,18 @@
+ 
+   /* initialize the xml parser */
+   tmp-&gt;parser = XML_ParserCreate(NULL);
++  /* define the data pass as parameter during callback call. */
+   XML_SetUserData(tmp-&gt;parser, e);
++  /* define callback */
+   XML_SetElementHandler(tmp-&gt;parser, 
+ 			egxp_protocol_handler_start_element, 
+ 			egxp_protocol_handler_end_element);
+   XML_SetCharacterDataHandler(tmp-&gt;parser,  egxp_protocol_handler_char_data);
+-
++  
+   /* initialize the protocol stack */
+   tmp-&gt;protocol_stack = e-&gt;root;
+   assert (tmp-&gt;protocol_stack != NULL);
+-
++  
+   return tmp;
+ }
+ 
+@@ -70,18 +72,16 @@
+ 
+   /* do we need to free the message ? */
+   if (ph-&gt;current_msg) {
+-    egxp_message_free (ph-&gt;current_msg);
++    /* free the root to be sure that we forget no message */
++    egxp_message_free (egxp_message_root (ph-&gt;current_msg));
++    ph-&gt;current_msg = NULL;
+   }
+-  
+-  free (ph);
++  FREE (ph);
+ }
+ 
+ 
+ 
+ 
+-
+-
+-
+ void egxp_protocol_handler_start_element(void *userData, const char *name, const char **atts) {
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_protocol_handler_start_element : %s\n&quot;, name);
+@@ -115,6 +115,7 @@
+   
+   /* manage protocol */
+   assert (ph-&gt;protocol_stack);
++  assert (ph-&gt;current_msg);
+   
+   /* try to get the Egxp_Node correspond to the tag id and parameter */
+   node = egxp_protocol_handler_get_node (ph-&gt;protocol_stack, message, eg-&gt;opcodes);
+@@ -138,11 +139,8 @@
+   Egxp_ProtocolHandler * ph = eg-&gt;protocol_handler;
+   
+   assert (eg &amp;&amp; ph);
+-  
+   assert (ph-&gt;current_msg);
+   
+-  egxp_message_print(ph-&gt;current_msg);
+-  
+   /* check if the current message is equal to the current protocol stack node */
+   if (egxp_protocol_handler_equals (ph-&gt;protocol_stack, ph-&gt;current_msg, eg-&gt;opcodes)) {
+     
+
+Modified: src/egxp/test.c
+===================================================================
+--- src/egxp/test.c	2005-02-18 21:00:04 UTC (rev 19)
++++ src/egxp/test.c	2005-02-20 22:12:08 UTC (rev 20)
+@@ -38,7 +38,6 @@
+   egxp_opcode_add (eg-&gt;opcodes, &quot;set&quot;);
+   
+ 
+-  /* display information about opcode */
+   egxp_opcode_print (eg-&gt;opcodes);
+   
+   
+@@ -78,6 +77,10 @@
+   
+   /* create a stream message without attribute */
+   Egxp_Message * mesg1 = egxp_message_new (&quot;stream&quot;);
++  egxp_message_add_attribute (mesg1, egxp_message_attribute_new (&quot;fr&quot;, &quot;sd&quot;));
++  egxp_message_add_attribute (mesg1, egxp_message_attribute_new (&quot;dfr&quot;, &quot;sd&quot;));
++  egxp_message_add_attribute (mesg1, egxp_message_attribute_new (&quot;ffr&quot;, &quot;sd&quot;));
++  egxp_message_add_attribute (mesg1, egxp_message_attribute_new (&quot;gfr&quot;, &quot;sd&quot;));
+   /* test if it's possible to get the node from the egxp protocol handler */
+   n1 = egxp_protocol_handler_get_node (eg-&gt;protocol_handler-&gt;protocol_stack,
+                                        mesg1, eg-&gt;opcodes);
+@@ -94,6 +97,9 @@
+   /* create a iq message with one attributes */
+   Egxp_Message * mesg2 = egxp_message_new (&quot;iq&quot;);
+   egxp_message_add_attribute (mesg2, egxp_message_attribute_new (&quot;type&quot;, &quot;get&quot;));
++  egxp_message_add_attribute (mesg2, egxp_message_attribute_new (&quot;atype&quot;, &quot;eget&quot;));
++  egxp_message_add_attribute (mesg2, egxp_message_attribute_new (&quot;ntype&quot;, &quot;aget&quot;));
++  egxp_message_add_attribute (mesg2, egxp_message_attribute_new (&quot;dtype&quot;, &quot;gfget&quot;));
+   /* test if it's possible to get the node from the egxp protocol handler */
+   printf(&quot;Get iq node from protocol handler(it should not be null): %p\n&quot;,
+          egxp_protocol_handler_get_node (n1, mesg2, eg-&gt;opcodes));
+@@ -103,6 +109,12 @@
+   /* free the message */
+   // egxp_message_free (mesg1);
+   
++  int i;
++  for (i = 0; i &lt; 1000 ; i++) {
++    char * buf = egxp_message_to_xml (mesg1, 1);
++    printf(&quot;%s\n%d\n&quot;, buf, strlen (buf));
++    free (buf);
++  }
+   
+   /* free opcode */
+   egxp_free (eg);
+
+Modified: src/xmpp/Makefile.am
+===================================================================
+--- src/xmpp/Makefile.am	2005-02-18 21:00:04 UTC (rev 19)
++++ src/xmpp/Makefile.am	2005-02-20 22:12:08 UTC (rev 20)
+@@ -18,7 +18,8 @@
+ 	xmpp.h           \
+ 	xmpp_jid.h       \
+ 	xmpp_message.h   \
+-	xmpp_auth.h
++	xmpp_auth.h      \
++	sha1.h
+ 
+ libxmpp_la_SOURCES = \
+ 	xmpp_opcode.c    \
+@@ -26,6 +27,7 @@
+ 	xmpp.c           \
+ 	xmpp_jid.c       \
+ 	xmpp_message.c   \
+-	xmpp_auth.c
++	xmpp_auth.c      \
++	sha1.c
+ 
+ libxmpp_la_CFLAGS = $(ecore_cflags) $(IDN_CFLAGS) $(EXPAT_INCLUDE) -I$(top_srcdir)/src
+
+Added: src/xmpp/sha1.c
+===================================================================
+--- src/xmpp/sha1.c	2005-02-18 21:00:04 UTC (rev 19)
++++ src/xmpp/sha1.c	2005-02-20 22:12:08 UTC (rev 20)
+@@ -0,0 +1,163 @@
++/* 
++ * The contents of this file are subject to the Mozilla Public
++ * License Version 1.1 (the &quot;License&quot;); you may not use this file
++ * except in compliance with the License. You may obtain a copy of
++ * the License at <A HREF="http://www.mozilla.org/MPL/">http://www.mozilla.org/MPL/</A>
++ * 
++ * Software distributed under the License is distributed on an &quot;AS
++ * IS&quot; basis, WITHOUT WARRANTY OF ANY KIND, either express or
++ * implied. See the License for the specific language governing
++ * rights and limitations under the License.
++ * 
++ * The Original Code is SHA 180-1 Reference Implementation (Compact version)
++ * 
++ * The Initial Developer of the Original Code is Paul Kocher of
++ * Cryptography Research.  Portions created by Paul Kocher are 
++ * Copyright (C) 1995-9 by Cryptography Research, Inc.  All
++ * Rights Reserved.
++ * 
++ */
++
++/* modified for j2 by Robert Norris */
++
++#include &quot;sha1.h&quot;
++#include &lt;string.h&gt;
++
++static void sha1_hashblock(sha1_state_t *ctx);
++
++void sha1_init(sha1_state_t *ctx) {
++  int i;
++
++  ctx-&gt;lenW = 0;
++  ctx-&gt;sizeHi = ctx-&gt;sizeLo = 0;
++
++  /* Initialize H with the magic constants (see FIPS180 for constants)
++   */
++  ctx-&gt;H[0] = 0x67452301L;
++  ctx-&gt;H[1] = 0xefcdab89L;
++  ctx-&gt;H[2] = 0x98badcfeL;
++  ctx-&gt;H[3] = 0x10325476L;
++  ctx-&gt;H[4] = 0xc3d2e1f0L;
++
++  for (i = 0; i &lt; 80; i++)
++    ctx-&gt;W[i] = 0;
++}
++
++
++void sha1_append(sha1_state_t *ctx, const unsigned char *dataIn, int len) {
++  int i;
++
++  /* Read the data into W and process blocks as they get full
++   */
++  for (i = 0; i &lt; len; i++) {
++    ctx-&gt;W[ctx-&gt;lenW / 4] &lt;&lt;= 8;
++    ctx-&gt;W[ctx-&gt;lenW / 4] |= (unsigned long)dataIn[i];
++    if ((++ctx-&gt;lenW) % 64 == 0) {
++      sha1_hashblock(ctx);
++      ctx-&gt;lenW = 0;
++    }
++    ctx-&gt;sizeLo += 8;
++    ctx-&gt;sizeHi += (ctx-&gt;sizeLo &lt; 8);
++  }
++}
++
++
++void sha1_finish(sha1_state_t *ctx, unsigned char hashout[20]) {
++  unsigned char pad0x80 = 0x80;
++  unsigned char pad0x00 = 0x00;
++  unsigned char padlen[8];
++  int i;
++
++  /* Pad with a binary 1 (e.g. 0x80), then zeroes, then length
++   */
++  padlen[0] = (unsigned char)((ctx-&gt;sizeHi &gt;&gt; 24) &amp; 255);
++  padlen[1] = (unsigned char)((ctx-&gt;sizeHi &gt;&gt; 16) &amp; 255);
++  padlen[2] = (unsigned char)((ctx-&gt;sizeHi &gt;&gt; 8) &amp; 255);
++  padlen[3] = (unsigned char)((ctx-&gt;sizeHi &gt;&gt; 0) &amp; 255);
++  padlen[4] = (unsigned char)((ctx-&gt;sizeLo &gt;&gt; 24) &amp; 255);
++  padlen[5] = (unsigned char)((ctx-&gt;sizeLo &gt;&gt; 16) &amp; 255);
++  padlen[6] = (unsigned char)((ctx-&gt;sizeLo &gt;&gt; 8) &amp; 255);
++  padlen[7] = (unsigned char)((ctx-&gt;sizeLo &gt;&gt; 0) &amp; 255);
++  sha1_append(ctx, &amp;pad0x80, 1);
++  while (ctx-&gt;lenW != 56)
++    sha1_append(ctx, &amp;pad0x00, 1);
++  sha1_append(ctx, padlen, 8);
++
++  /* Output hash
++   */
++  for (i = 0; i &lt; 20; i++) {
++    hashout[i] = (unsigned char)(ctx-&gt;H[i / 4] &gt;&gt; 24);
++    ctx-&gt;H[i / 4] &lt;&lt;= 8;
++  }
++
++  /*
++   *  Re-initialize the context (also zeroizes contents)
++   */
++  sha1_init(ctx); 
++}
++
++
++void sha1_hash(const unsigned char *dataIn, int len, unsigned char hashout[20]) {
++  sha1_state_t ctx;
++
++  sha1_init(&amp;ctx);
++  sha1_append(&amp;ctx, dataIn, len);
++  sha1_finish(&amp;ctx, hashout);
++}
++
++
++#define SHA_ROTL(X,n) ((((X) &lt;&lt; (n)) | ((X) &gt;&gt; (32-(n)))) &amp; 0xffffffffL)
++
++static void sha1_hashblock(sha1_state_t *ctx) {
++  int t;
++  unsigned long A,B,C,D,E,TEMP;
++
++  for (t = 16; t &lt;= 79; t++)
++    ctx-&gt;W[t] =
++      SHA_ROTL(ctx-&gt;W[t-3] ^ ctx-&gt;W[t-8] ^ ctx-&gt;W[t-14] ^ ctx-&gt;W[t-16], 1);
++
++  A = ctx-&gt;H[0];
++  B = ctx-&gt;H[1];
++  C = ctx-&gt;H[2];
++  D = ctx-&gt;H[3];
++  E = ctx-&gt;H[4];
++
++  for (t = 0; t &lt;= 19; t++) {
++    TEMP = (SHA_ROTL(A,5) + (((C^D)&amp;B)^D)     + E + ctx-&gt;W[t] + 0x5a827999L) &amp; 0xffffffffL;
++    E = D; D = C; C = SHA_ROTL(B, 30); B = A; A = TEMP;
++  }
++  for (t = 20; t &lt;= 39; t++) {
++    TEMP = (SHA_ROTL(A,5) + (B^C^D)           + E + ctx-&gt;W[t] + 0x6ed9eba1L) &amp; 0xffffffffL;
++    E = D; D = C; C = SHA_ROTL(B, 30); B = A; A = TEMP;
++  }
++  for (t = 40; t &lt;= 59; t++) {
++    TEMP = (SHA_ROTL(A,5) + ((B&amp;C)|(D&amp;(B|C))) + E + ctx-&gt;W[t] + 0x8f1bbcdcL) &amp; 0xffffffffL;
++    E = D; D = C; C = SHA_ROTL(B, 30); B = A; A = TEMP;
++  }
++  for (t = 60; t &lt;= 79; t++) {
++    TEMP = (SHA_ROTL(A,5) + (B^C^D)           + E + ctx-&gt;W[t] + 0xca62c1d6L) &amp; 0xffffffffL;
++    E = D; D = C; C = SHA_ROTL(B, 30); B = A; A = TEMP;
++  }
++
++  ctx-&gt;H[0] += A;
++  ctx-&gt;H[1] += B;
++  ctx-&gt;H[2] += C;
++  ctx-&gt;H[3] += D;
++  ctx-&gt;H[4] += E;
++}
++
++
++/** turn raw into hex - out must be (inlen*2)+1 */
++void hex_from_raw(char *in, int inlen, char *out) {
++    int i, h, l;
++
++    for(i = 0; i &lt; inlen; i++) {
++        h = in[i] &amp; 0xf0;
++        h &gt;&gt;= 4;
++        l = in[i] &amp; 0x0f;
++        out[i * 2] = (h &gt;= 0x0 &amp;&amp; h &lt;= 0x9) ? (h + 0x30) : (h + 0x57);
++        out[i * 2 + 1] = (l &gt;= 0x0 &amp;&amp; l &lt;= 0x9) ? (l + 0x30) : (l + 0x57);
++    }
++    out[i * 2] = '\0';
++}
++
+
+Added: src/xmpp/sha1.h
+===================================================================
+--- src/xmpp/sha1.h	2005-02-18 21:00:04 UTC (rev 19)
++++ src/xmpp/sha1.h	2005-02-20 22:12:08 UTC (rev 20)
+@@ -0,0 +1,43 @@
++/*
++ * jabberd - Jabber Open Source Server
++ * Copyright (c) 2002-2003 Jeremie Miller, Thomas Muldowney,
++ *                         Ryan Eatmon, Robert Norris
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA02111-1307USA
++ */
++
++/* sha1 functions */
++
++#ifndef INCL_SHA1_H
++#define INCL_SHA1_H
++
++typedef struct sha1_state_s {
++  unsigned long H[5];
++  unsigned long W[80];
++  int lenW;
++  unsigned long sizeHi,sizeLo;
++} sha1_state_t;
++
++void sha1_init(sha1_state_t *ctx);
++void sha1_append(sha1_state_t *ctx, const unsigned char *dataIn, int len);
++void sha1_finish(sha1_state_t *ctx, unsigned char hashout[20]);
++void sha1_hash(const unsigned char *dataIn, int len, unsigned char hashout[20]);
++
++
++/** turn raw into hex - out must be (inlen*2)+1 */
++void hex_from_raw(char *in, int inlen, char *out);
++
++
++#endif
+
+Modified: src/xmpp/test.c
+===================================================================
+--- src/xmpp/test.c	2005-02-18 21:00:04 UTC (rev 19)
++++ src/xmpp/test.c	2005-02-20 22:12:08 UTC (rev 20)
+@@ -33,8 +33,8 @@
+   Xmpp * xm = xmpp_register (eg);
+   
+   /* after 3 second we quit the ecore loop */
+-  Ecore_Timer * timer = ecore_timer_add (5, timer_cb, NULL);
+-  printf(&quot;Quit automaticly (after 5 seconds)\n&quot;);
++  Ecore_Timer * timer = ecore_timer_add (15, timer_cb, NULL);
++  printf(&quot;Quit automaticly (after 15 seconds)\n&quot;);
+   
+   /* define the connection */
+   eg-&gt;connection = egxp_connection_new (argv[2], atoi (argv[3]), 0);
+@@ -54,6 +54,8 @@
+   ecore_main_loop_begin();
+   
+   /* free Egxp */
++  egxp_message_print(eg-&gt;protocol_handler-&gt;current_msg);
++
+   egxp_free (eg);
+   
+   /* shutdown */
+
+Modified: src/xmpp/xmpp_auth.c
+===================================================================
+--- src/xmpp/xmpp_auth.c	2005-02-18 21:00:04 UTC (rev 19)
++++ src/xmpp/xmpp_auth.c	2005-02-20 22:12:08 UTC (rev 20)
+@@ -3,7 +3,11 @@
+ #include &lt;stdio.h&gt;
+ 
+ #include &lt;Ecore_Data.h&gt;
++
++#include &quot;egxp/egxp_message.h&quot;
++
+ #include &quot;xmpp.h&quot;
++#include &quot;sha1.h&quot;
+ 
+ #include &quot;xmpp_auth.h&quot;
+ 
+@@ -11,7 +15,7 @@
+ #ifdef XMPP_DEBUG
+   printf(&quot;TRACE: xmpp_auth_new\n&quot;);
+ #endif
+-
++  
+   /* initialize the structure */
+   Xmpp_Auth * auth = XMPP_AUTH(malloc (sizeof(Xmpp_Auth)));
+   
+@@ -43,7 +47,7 @@
+   printf(&quot;TRACE: xmpp_auth_msg_no_sasl\n&quot;);
+ #endif
+   assert (x);
+- 
++  
+   /* create the iq type=&quot;get&quot; */
+   Egxp_Message * iq = xmpp_message_iq (XMPP_VALUE_IQ_GET, &quot;auth_1&quot;, 
+ 				       x-&gt;jid-&gt;host);
+@@ -61,3 +65,85 @@
+   Egxp_Connection * conn = EGXP_EXTENSION(x)-&gt;parent-&gt;connection;
+   egxp_connection_send_message (conn, iq, 1);
+ }
++
++
++
++void xmpp_auth_auth_1_cb (Egxp_Message * msg, void * eg) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_auth_auth_1_cb\n&quot;);
++#endif
++  /**
++   * When we received this message it is because we have succeed
++   * the first non-sasl step or there is an error ?. Now in 
++   * function of the reply of the server we should 
++   * send good information
++   */
++  assert (msg &amp;&amp; eg);
++  
++  /* get the xmpp protocol */
++  Xmpp * xm = XMPP( egxp_extension_get_from_string (EGXP(eg), XMPP_REGISTER));
++  assert (xm);
++
++  /* now analyse the response of the server */
++  /* try to get the query */
++  Egxp_Message * received_query = egxp_message_get_child (msg,  XMPP_TAG_QUERY);
++  if (received_query == NULL) {
++    egxp_message_print (msg);
++    assert (0);
++  }
++  /* FIXME: Technically we should test the response of the server to know what
++     type of message we need to send */
++
++
++
++  /* begin to build our response */
++  /* iq type=set id=auth_2 to=... */
++  Egxp_Message * iq = xmpp_message_iq (XMPP_VALUE_IQ_SET, 
++				       XMPP_VALUE_IQ_AUTH_2,
++				       xm-&gt;jid-&gt;host);
++  /* query xmlns= &quot;jabber:iq:auth&quot; */
++  Egxp_Message * query = xmpp_message_query (XMPP_VALUE_QUERY_AUTH);
++  egxp_message_add_child (iq, query);
++  
++  /* create username */
++  Egxp_Message * username = egxp_message_new (XMPP_TAG_USERNAME);
++  egxp_message_append_data (username, xm-&gt;jid-&gt;user, strlen (xm-&gt;jid-&gt;user));
++  egxp_message_add_child (query, username);
++  
++  /* create password */
++  if(xm-&gt;auth &amp;&amp; xm-&gt;auth-&gt;password &amp;&amp; xm-&gt;auth-&gt;stream_id) {
++    Egxp_Message * password = egxp_message_new (XMPP_TAG_PASSWORD);
++    /* build the digest data */
++    sha1_state_t sha1;
++    char sha1_hash[20];
++    sha1_init(&amp;sha1);
++    sha1_append (&amp;sha1, xm-&gt;auth-&gt;stream_id, strlen (xm-&gt;auth-&gt;stream_id));
++    sha1_append (&amp;sha1, xm-&gt;auth-&gt;password, strlen (xm-&gt;auth-&gt;password));
++    sha1_finish (&amp;sha1, sha1_hash);
++    char sha1_hex[41];
++    hex_from_raw (sha1_hash, 20, sha1_hex);
++    /* add the data to the password message */
++    egxp_message_append_data (password, sha1_hex, 41);
++    egxp_message_add_child (query, password);
++  } else {
++#ifdef XMPP_DEBUG
++    printf(&quot;DEBUG: xmpp_auth_auth_1_cb -&gt; The auth seems to be null or the password and stream_id are null\n&quot;);
++#endif
++  }
++  
++  /* try to append resource */
++  if (xm-&gt;jid-&gt;resource) {
++    Egxp_Message * resource = egxp_message_new (XMPP_TAG_RESOURCE);
++    egxp_message_append_data (resource, xm-&gt;jid-&gt;resource, strlen (xm-&gt;jid-&gt;resource));
++    egxp_message_add_child (query, resource);
++  } else {
++#ifdef XMPP_DEBUG
++    printf(&quot;DEBUG: xmpp_auth_auth_1_cb -&gt; It seems that you haven't define resource\n&quot;);
++#endif 
++  }
++
++  /* now we can try to send the message */
++  // Egxp_Connection * conn = EGXP_EXTENSION(xm)-&gt;parent-&gt;connection;
++  //egxp_connection_send_message (conn, iq, 1);
++  egxp_message_free (iq);
++}
+
+Modified: src/xmpp/xmpp_auth.h
+===================================================================
+--- src/xmpp/xmpp_auth.h	2005-02-18 21:00:04 UTC (rev 19)
++++ src/xmpp/xmpp_auth.h	2005-02-20 22:12:08 UTC (rev 20)
+@@ -21,6 +21,7 @@
+ 
+ /**
+  * Initialize the structure
++ * @return the newly allocated structure
+  */
+ Xmpp_Auth * xmpp_auth_new ();
+ 
+@@ -29,6 +30,7 @@
+  * Free the authentification structure
+  * - free the password
+  * - free the stream id
++ * @param a: The Authentification structure to be freed.
+  */
+ void xmpp_auth_free (Xmpp_Auth * a);
+ 
+@@ -37,7 +39,17 @@
+ /**
+  * Send a message to try to be authenticiate in
+  * no SASL mode
++ * @param x: The Xmpp structure
+  */
+ void xmpp_auth_msg_no_sasl (struct _Xmpp * x);
+ 
++
++/**
++ * This method is called when the server return the response
++ * of the query auth_1 (the first step of the non-sasl auth).
++ * @param msg: The message
++ * @param eg: The Egxp object
++ */
++void xmpp_auth_auth_1_cb (Egxp_Message * msg, void * eg);
++
+ #endif
+
+Modified: src/xmpp/xmpp_opcode.c
+===================================================================
+--- src/xmpp/xmpp_opcode.c	2005-02-18 21:00:04 UTC (rev 19)
++++ src/xmpp/xmpp_opcode.c	2005-02-20 22:12:08 UTC (rev 20)
+@@ -23,6 +23,7 @@
+ #include &quot;egxp/egxp_node.h&quot;
+ 
+ #include &quot;xmpp_callback.h&quot;
++#include &quot;xmpp_auth.h&quot;
+ #include &quot;xmpp_opcode.h&quot;
+ 
+ void xmpp_opcode_init (Egxp * eg) {
+@@ -97,6 +98,6 @@
+   egxp_node_add_condition (iq, egxp_condition_new (egxp_opcode_get_id (eg-&gt;opcodes, XMPP_ATT_ID),
+ 						   egxp_opcode_get_id (eg-&gt;opcodes, XMPP_VALUE_IQ_AUTH_1)));
+   /* attach callback */
++  // egxp_node_set_cb (iq, NULL, xmpp_auth_auth_1_cb);
+   
+-
+ }
+
+Modified: src/xmpp/xmpp_opcode.h
+===================================================================
+--- src/xmpp/xmpp_opcode.h	2005-02-18 21:00:04 UTC (rev 19)
++++ src/xmpp/xmpp_opcode.h	2005-02-20 22:12:08 UTC (rev 20)
+@@ -31,6 +31,8 @@
+ #define XMPP_TAG_QUERY  &quot;query&quot;
+ 
+ #define XMPP_TAG_USERNAME       &quot;username&quot;
++#define XMPP_TAG_PASSWORD       &quot;digest&quot;
++#define XMPP_TAG_RESOURCE       &quot;resource&quot;
+ 
+ #define XMPP_ATT_XMLNS_STREAM   &quot;xmlns:stream&quot;
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000015.html">[Eim-svn] r19 - src/egxp
+</A></li>
+	<LI>Next message: <A HREF="000017.html">[Eim-svn] r21 - / src/egxp src/xmpp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#16">[ date ]</a>
+              <a href="thread.html#16">[ thread ]</a>
+              <a href="subject.html#16">[ subject ]</a>
+              <a href="author.html#16">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

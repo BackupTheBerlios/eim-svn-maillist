@@ -1,0 +1,369 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r21 - / src/egxp src/xmpp
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-February/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r21%20-%20/%20src/egxp%20src/xmpp&In-Reply-To=%3C200502232236.j1NMaE8B006027%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000016.html">
+   <LINK REL="Next"  HREF="000018.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r21 - / src/egxp src/xmpp</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r21%20-%20/%20src/egxp%20src/xmpp&In-Reply-To=%3C200502232236.j1NMaE8B006027%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r21 - / src/egxp src/xmpp">jol at sheep.berlios.de
+       </A><BR>
+    <I>Wed Feb 23 23:36:14 CET 2005</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000016.html">[Eim-svn] r20 - / src/egxp src/xmpp
+</A></li>
+        <LI>Next message: <A HREF="000018.html">[Eim-svn] r22 - / src src/xmpp-im
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#17">[ date ]</a>
+              <a href="thread.html#17">[ thread ]</a>
+              <a href="subject.html#17">[ subject ]</a>
+              <a href="author.html#17">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-02-23 23:36:12 +0100 (Wed, 23 Feb 2005)
+New Revision: 21
+
+Modified:
+   ChangeLog
+   src/egxp/egxp.c
+   src/egxp/egxp_connection.c
+   src/egxp/egxp_message.c
+   src/egxp/egxp_protocol_handler.c
+   src/egxp/test.c
+   src/xmpp/test.c
+   src/xmpp/xmpp_auth.c
+   src/xmpp/xmpp_auth.h
+   src/xmpp/xmpp_callback.c
+   src/xmpp/xmpp_opcode.c
+Log:
+- Fix the bug ! The message was not correctly remove from the child list
+  of a message. The reason is that i didn't use correctly the ecore_list functions.
+- Add some helpful functions.
+- Now we are authentifiate near the server.
+- There is no leaks from eim
+
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-02-20 22:12:08 UTC (rev 20)
++++ ChangeLog	2005-02-23 22:36:12 UTC (rev 21)
+@@ -1,3 +1,9 @@
++2005-02-24(jol):
++	- Fix the bug ! The message was not correctly remove from the child list
++	of a message. The reason is that i didn't use correctly the ecore_list functions.
++	- Add some helpful functions.
++	- Now we are authentifiate near the server.
++	
+ 2005-02-20(jol):
+ 	- add egxp_message_root allowing to get the root message of a message.
+ 	- try to fix memory leaks and a dirty segfault.
+
+Modified: src/egxp/egxp.c
+===================================================================
+--- src/egxp/egxp.c	2005-02-20 22:12:08 UTC (rev 20)
++++ src/egxp/egxp.c	2005-02-23 22:36:12 UTC (rev 21)
+@@ -35,7 +35,7 @@
+   
+   /* the root of the protocol */
+   tmp-&gt;root = egxp_node_new (egxp_opcode_get_id (tmp-&gt;opcodes, 
+-						      &quot;__ROOT__&quot;));
++						 &quot;__ROOT__&quot;));
+     
+   /* initialize the user data */
+   tmp-&gt;user_data = NULL;
+
+Modified: src/egxp/egxp_connection.c
+===================================================================
+--- src/egxp/egxp_connection.c	2005-02-20 22:12:08 UTC (rev 20)
++++ src/egxp/egxp_connection.c	2005-02-23 22:36:12 UTC (rev 21)
+@@ -87,7 +87,7 @@
+ 
+   // to xml
+   char * buf = egxp_message_to_xml (msg, end_tag);
+-  printf(&quot;log send: %s\nsize: %d\n&quot;, buf, strlen (buf));
++  printf(&quot;LOG egxp_connection_send_message: %s\nsize: %d\n&quot;, buf, strlen (buf));
+   
+   // free message
+   egxp_message_free (msg);
+
+Modified: src/egxp/egxp_message.c
+===================================================================
+--- src/egxp/egxp_message.c	2005-02-20 22:12:08 UTC (rev 20)
++++ src/egxp/egxp_message.c	2005-02-23 22:36:12 UTC (rev 21)
+@@ -71,13 +71,13 @@
+   
+   /* if attached to a parent, we remove the dependancies */
+   if (m-&gt;parent) {
+-    // egxp_message_remove_child (m-&gt;parent, m);
++    egxp_message_remove_child (m-&gt;parent, m);
+   }
+   m-&gt;parent = NULL;
+ 
+  IF_FREE (m-&gt;data);
+-  FREE (m);
+-  
++ FREE (m);
++ 
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_message_free -&gt; end: %s\n&quot;, debug);
+   FREE (debug);
+@@ -168,11 +168,15 @@
+ 
+   ecore_list_goto_first(m-&gt;childs);
+   Egxp_Message * list_item;
+-  while((list_item = EGXP_MESSAGE(ecore_list_next(m-&gt;childs))) != NULL) {
++  while((list_item = EGXP_MESSAGE(ecore_list_current(m-&gt;childs))) != NULL) {
+     if (ma == list_item) {
+-      ecore_list_remove (m-&gt;childs);
++      if (! ecore_list_remove (m-&gt;childs)) {
++	printf(&quot;Remove Failed !!!!!!!!!!!!!!!!!!!! %s %s\n&quot;, m-&gt;tagname, list_item-&gt;tagname);
++	assert (0);
++      }
+       return;
+-    } 
++    }
++    ecore_list_next (m-&gt;childs);
+   }
+ }
+ 
+@@ -230,7 +234,7 @@
+ 
+   // &quot;&lt;tagname &quot; + 3 -&gt; \0
+   len = strlen (m-&gt;tagname) + 3;
+-  buf = (char*) calloc (len, sizeof (char));
++  buf = (char*) malloc (len * sizeof (char));
+   buf = memset (buf, 0, len); 
+   buf = strncat (buf, &quot;&lt;&quot;, 1);
+   buf = strncat (buf, m-&gt;tagname, strlen (m-&gt;tagname));
+
+Modified: src/egxp/egxp_protocol_handler.c
+===================================================================
+--- src/egxp/egxp_protocol_handler.c	2005-02-20 22:12:08 UTC (rev 20)
++++ src/egxp/egxp_protocol_handler.c	2005-02-23 22:36:12 UTC (rev 21)
+@@ -107,9 +107,12 @@
+   
+   /* attach the message */
+   if (ph-&gt;current_msg == NULL) {
++    /* set the message as root message */
+     ph-&gt;current_msg = message;
+   } else {
++    /* add the new message to the root node */
+     egxp_message_add_child (ph-&gt;current_msg, message);
++    /* the new message become the root */
+     ph-&gt;current_msg = message;
+   }
+   
+@@ -157,15 +160,22 @@
+     /* go to the parent message and destroy the current message */
+     Egxp_Message * old = ph-&gt;current_msg;
+     ph-&gt;current_msg = old-&gt;parent;
+-    if (ph-&gt;current_msg) egxp_message_remove_child (ph-&gt;current_msg, old);
++    
++    /* remove the old message */
+     egxp_message_free (old);
+-    
+   } else {
+ 
+ #ifdef EGXP_DEBUG
+     printf(&quot;TRACE: egxp_protocol_handler_end_element -&gt; NOT matches opcode : %s\n&quot;, name);
+ #endif   
+-    ph-&gt;current_msg = ph-&gt;current_msg-&gt;parent;
++    
++    /* if there is no parent we destroy the current message */
++    if (ph-&gt;current_msg-&gt;parent == NULL) {
++      egxp_message_free (ph-&gt;current_msg);
++      ph-&gt;current_msg = NULL;
++    }
++    /* other wise we continue */
++    else ph-&gt;current_msg = ph-&gt;current_msg-&gt;parent;
+   }
+ }
+ 
+@@ -179,7 +189,7 @@
+   Egxp * eg = EGXP (userData);
+   Egxp_ProtocolHandler * ph = eg-&gt;protocol_handler;
+   
+-  assert (eg &amp;&amp; ph);
++  assert (eg &amp;&amp; ph &amp;&amp; ph-&gt;current_msg);
+   
+   /* append data to the message */
+   egxp_message_append_data ( ph-&gt;current_msg, (char*) s, len);
+@@ -193,7 +203,7 @@
+   printf(&quot;TRACE: egxp_protocol_handler_condition_equals\n&quot;);
+ #endif
+   assert (message &amp;&amp; opcode);
+-
++  
+   /* if the node has no condition we can conclude that they are equals */
+   if (conditions == NULL) return 1;
+   
+@@ -277,6 +287,8 @@
+   Egxp_ProtocolHandler * ph = eg-&gt;protocol_handler;
+   XML_Parser parser =  ph-&gt;parser;
+   
++  assert (eg &amp;&amp; ph &amp;&amp; parser);
++
+   char * tmp_buf = (char*) malloc ((ev-&gt;size +1) * sizeof (char));
+   tmp_buf[ev-&gt;size] = '\0';
+   strncpy (tmp_buf, (char*)ev-&gt;data, ev-&gt;size); 
+
+Modified: src/egxp/test.c
+===================================================================
+--- src/egxp/test.c	2005-02-20 22:12:08 UTC (rev 20)
++++ src/egxp/test.c	2005-02-23 22:36:12 UTC (rev 21)
+@@ -106,6 +106,16 @@
+   
+   egxp_message_add_child (mesg1, mesg2);
+ 
++
++  egxp_message_append_data (mesg1, &quot;terglkdfjgldsjglsdfjgldsfgsldkj&quot;,
++			    strlen (&quot;terglkdfjgldsjglsdfjgldsfgsldkj&quot;));
++  egxp_message_append_data (mesg1, &quot;terglkdfjglaaaaaaaaaaadsjglsdfjgldsfgsldk&quot;,
++			    strlen(&quot;terglkdfjglaaaaaaaaaaadsjglsdfjgldsfgsldk&quot;)
++			    );
++  egxp_message_append_data (mesg1, &quot;terglkdfjgldsjgl...sdfjgldsfgsldkj&quot;,
++			    strlen  (&quot;terglkdfjgldsjgl...sdfjgldsfgsldkj&quot;));
++  
++
+   /* free the message */
+   // egxp_message_free (mesg1);
+   
+
+Modified: src/xmpp/test.c
+===================================================================
+--- src/xmpp/test.c	2005-02-20 22:12:08 UTC (rev 20)
++++ src/xmpp/test.c	2005-02-23 22:36:12 UTC (rev 21)
+@@ -47,6 +47,9 @@
+   /* define the jid */
+   xm-&gt;jid = xmpp_jid_new (argv[1], argv[2], &quot;eim&quot;);
+   
++  /* define the password */
++  xm-&gt;auth = xmpp_auth_new_with_passwd (argv[4]);
++  
+   /* now we can send a message to the server */
+   xmpp_message_stream (xm);
+ 
+
+Modified: src/xmpp/xmpp_auth.c
+===================================================================
+--- src/xmpp/xmpp_auth.c	2005-02-20 22:12:08 UTC (rev 20)
++++ src/xmpp/xmpp_auth.c	2005-02-23 22:36:12 UTC (rev 21)
+@@ -27,6 +27,17 @@
+ }
+ 
+ 
++Xmpp_Auth * xmpp_auth_new_with_passwd (char * pwd) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_auth_new_with_passwd\n&quot;);
++#endif
++  Xmpp_Auth * tmp = xmpp_auth_new ();
++  /* load password */
++  tmp-&gt;password = strdup (pwd);
++  
++  return tmp;
++}
++
+ void xmpp_auth_free (Xmpp_Auth * a) {
+ #ifdef XMPP_DEBUG
+   printf(&quot;TRACE: xmpp_auth_free\n&quot;);
+@@ -141,9 +152,8 @@
+     printf(&quot;DEBUG: xmpp_auth_auth_1_cb -&gt; It seems that you haven't define resource\n&quot;);
+ #endif 
+   }
+-
++  
+   /* now we can try to send the message */
+-  // Egxp_Connection * conn = EGXP_EXTENSION(xm)-&gt;parent-&gt;connection;
+-  //egxp_connection_send_message (conn, iq, 1);
+-  egxp_message_free (iq);
++  Egxp_Connection * conn = EGXP_EXTENSION(xm)-&gt;parent-&gt;connection;
++  egxp_connection_send_message (conn, iq, 1);
+ }
+
+Modified: src/xmpp/xmpp_auth.h
+===================================================================
+--- src/xmpp/xmpp_auth.h	2005-02-20 22:12:08 UTC (rev 20)
++++ src/xmpp/xmpp_auth.h	2005-02-23 22:36:12 UTC (rev 21)
+@@ -27,6 +27,13 @@
+ 
+ 
+ /**
++ * Initialize the structure with the password
++ * @return the newly allocated structure
++ */
++Xmpp_Auth * xmpp_auth_new_with_passwd (char * pwd);
++
++
++/**
+  * Free the authentification structure
+  * - free the password
+  * - free the stream id
+
+Modified: src/xmpp/xmpp_callback.c
+===================================================================
+--- src/xmpp/xmpp_callback.c	2005-02-20 22:12:08 UTC (rev 20)
++++ src/xmpp/xmpp_callback.c	2005-02-23 22:36:12 UTC (rev 21)
+@@ -40,7 +40,7 @@
+   
+   /* check if there is a authentification object */
+   if (xm-&gt;auth == NULL) xm-&gt;auth = xmpp_auth_new ();
+-
++  
+   /* try to set the stream id */
+   xm-&gt;auth-&gt;stream_id = egxp_message_get_attribute (msg, XMPP_ATT_ID);
+   
+
+Modified: src/xmpp/xmpp_opcode.c
+===================================================================
+--- src/xmpp/xmpp_opcode.c	2005-02-20 22:12:08 UTC (rev 20)
++++ src/xmpp/xmpp_opcode.c	2005-02-23 22:36:12 UTC (rev 21)
+@@ -98,6 +98,5 @@
+   egxp_node_add_condition (iq, egxp_condition_new (egxp_opcode_get_id (eg-&gt;opcodes, XMPP_ATT_ID),
+ 						   egxp_opcode_get_id (eg-&gt;opcodes, XMPP_VALUE_IQ_AUTH_1)));
+   /* attach callback */
+-  // egxp_node_set_cb (iq, NULL, xmpp_auth_auth_1_cb);
+-  
++  egxp_node_set_cb (iq, NULL, xmpp_auth_auth_1_cb);
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000016.html">[Eim-svn] r20 - / src/egxp src/xmpp
+</A></li>
+	<LI>Next message: <A HREF="000018.html">[Eim-svn] r22 - / src src/xmpp-im
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#17">[ date ]</a>
+              <a href="thread.html#17">[ thread ]</a>
+              <a href="subject.html#17">[ subject ]</a>
+              <a href="author.html#17">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

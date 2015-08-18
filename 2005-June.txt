@@ -1,0 +1,665 @@
+From jol at sheep.berlios.de  Fri Jun  3 00:40:36 2005
+From: jol at sheep.berlios.de (Joël Vennin at BerliOS)
+Date: Fri, 3 Jun 2005 00:40:36 +0200
+Subject: [Eim-svn] r36 - / src src/core src/gui
+Message-ID: <200506022240.j52MeaDj010401@sheep.berlios.de>
+
+Author: jol
+Date: 2005-06-03 00:39:56 +0200 (Fri, 03 Jun 2005)
+New Revision: 36
+
+Added:
+   src/core/
+   src/core/Makefile.am
+   src/core/conf.c
+   src/core/conf.h
+   src/core/eim.c
+   src/core/eim.h
+   src/main.c
+Removed:
+   src/conf.c
+   src/conf.h
+   src/eim.c
+Modified:
+   ChangeLog
+   TODO
+   configure.ac
+   src/Makefile.am
+   src/SConscript
+   src/gui/properties.c
+Log:
+- create the core directory, it should contains all stuff about
+  eim. Begin to think about core structure and how to save in good
+  way all account information. You can take a look at the TODO file.
+
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-05-29 13:02:58 UTC (rev 35)
++++ ChangeLog	2005-06-02 22:39:56 UTC (rev 36)
+@@ -1,3 +1,8 @@
++2005-06-03(jol):
++	- create the core directory, it should contains all stuff about
++	  eim. Begin to think about core structure and how to save in good
++	  way all account information. You can take a look at the TODO file.
++	
+ 2005-05-30(jol):
+ 	- begin the config stuff
+ 	- fix compilation error
+
+Modified: TODO
+===================================================================
+--- TODO	2005-05-29 13:02:58 UTC (rev 35)
++++ TODO	2005-06-02 22:39:56 UTC (rev 36)
+@@ -1,7 +1,26 @@
++- configuration file: Use a edb file to store all configuration. We need to
++keep a variable inside the file to tell us all configuration
++available in the config file. Next we should be able to
++restore all the stored configuration. We should
++save all account inside one file accounts.edb 
++
++
++- about the core/*, it must contains of the stuff necessary to
++do all possible job with eim (load/save/control connection). 
++
++
+ HIGH URGENCY
+-- Add a function to display the protocol define by egxp, it will help to debug.
++- We need to make some important job about the core of EIM.
++- In fact, we need to be able to have several Jabber account, so we need
++  to manage in the core of eim the configuration of each account, for now 
++  nothing has been done in this way. We need to create a core/directory which
++  manage all the important stuff of the eim. Load/Save/ each properties using
++  the edb_config system.
++- prepare callback association, maybe create a structure containing all callback.
++  Or maybe we should make a cleaner stuff in function of the protocol used.
+ 
+ 
++
+ LOW URGENCY
+ - Should change the egxp_message to handle integer tag instead of char * tag.
+ - Need some improvement in the egxp_message in order to limit buffer copy ...
+
+Modified: configure.ac
+===================================================================
+--- configure.ac	2005-05-29 13:02:58 UTC (rev 35)
++++ configure.ac	2005-06-02 22:39:56 UTC (rev 36)
+@@ -136,6 +136,7 @@
+ src/egxp/Makefile
+ src/xmpp/Makefile
+ src/xmpp-im/Makefile
++src/core/Makefile
+ src/gui/Makefile
+ doc/Makefile
+ ])
+
+Modified: src/Makefile.am
+===================================================================
+--- src/Makefile.am	2005-05-29 13:02:58 UTC (rev 35)
++++ src/Makefile.am	2005-06-02 22:39:56 UTC (rev 36)
+@@ -2,24 +2,23 @@
+ 	egxp    \
+ 	xmpp	\
+ 	xmpp-im \
++	core    \
+ 	gui
+ 
+ 
+ bin_PROGRAMS = eim
+ 
+ eim_SOURCES = \
+-	eim.c  \
+-	conf.c
++	main.c
+ 
+ eim_CFLAGS = \
+ 	-I$(top_srcdir)/src           \
+ 	$(ewl_cflags)                 \
+ 	$(ecore_cflags) $(IDN_CFLAGS)
+ 
+-
+ eim_LDADD = \
+ 	-Legxp/ -legxp        \
+ 	-Lxmpp/ -lxmpp        \
+ 	-Lxmpp-im/ -lxmppim   \
++	-Lcore/ -lcore        \
+ 	-Lgui/ -lgui
+-
+
+Modified: src/SConscript
+===================================================================
+--- src/SConscript	2005-05-29 13:02:58 UTC (rev 35)
++++ src/SConscript	2005-06-02 22:39:56 UTC (rev 36)
+@@ -1,9 +1,9 @@
+ Import ('env install_inc install_bin install_lib')
+ Export ('env install_inc install_bin install_lib')
+ 
+-files = ['eim.c']
++files = ['main.c']
+ 
+-eim = env.Program ('eim.c',
++eim = env.Program (files,
+                    LIBPATH=['#src/egxp', '#src/xmpp', '#src/xmpp-im', '#src/gui'],
+                    LIBS=['egxp', 'xmpp', 'xmppim', 'gui'])
+ 
+
+Deleted: src/conf.c
+===================================================================
+--- src/conf.c	2005-05-29 13:02:58 UTC (rev 35)
++++ src/conf.c	2005-06-02 22:39:56 UTC (rev 36)
+@@ -1,37 +0,0 @@
+-#include <assert.h>
+-#include "Ecore_Config.h"
+-#include "conf.h"
+-
+-
+-/**
+- * Initialize the config.
+- * @param eg: the Egxp structure
+- */
+-int eim_config_init (Egxp * eg) {
+-  assert (eg);
+-
+-  if (ecore_config_init ("eim") == ECORE_CONFIG_ERR_FAIL) {
+-    printf("WARNING: config file not available\n");
+-  }
+-  
+-  // load default config
+-
+-  // save in order to have config object
+-  eim_config_save ();
+-
+-  return 1;
+-}
+-
+-
+-/**
+- * Save the configuration
+- */
+-void eim_config_save () {
+-  ecore_config_save ();
+-}
+-
+-
+-void eim_config_shutdown () {
+-  eim_config_save ();
+-  ecore_config_shutdown ();
+-}
+
+Deleted: src/conf.h
+===================================================================
+--- src/conf.h	2005-05-29 13:02:58 UTC (rev 35)
++++ src/conf.h	2005-06-02 22:39:56 UTC (rev 36)
+@@ -1,14 +0,0 @@
+-#ifndef conf_header_
+-#define conf_header_
+-
+-#include "egxp/egxp.h"
+-
+-
+-int eim_config_init (Egxp * eg);
+-
+-
+-void eim_config_save ();
+-
+-void eim_config_shutdown ();
+-
+-#endif
+
+Added: src/core/Makefile.am
+===================================================================
+--- src/core/Makefile.am	2005-05-29 13:02:58 UTC (rev 35)
++++ src/core/Makefile.am	2005-06-02 22:39:56 UTC (rev 36)
+@@ -0,0 +1,18 @@
++noinst_LTLIBRARIES = libcore.la
++
++pkgincludeinputdir = $(pkgincludedir)/core
++pkgincludeinput_HEADERS= \
++	eim.h       
++
++libcore_la_SOURCES =      \
++	eim.c       
++
++libcore_la_CFLAGS = \
++	-I$(top_srcdir)/src                 \
++	$(ecore_cflags)                     \
++	$(IDN_CFLAGS) $(EXPAT_INCLUDE) 
++
++libcore_la_LIBADD = \
++	$(ecore_libs)                         \
++	$(IDN_LIBS)                           \
++	$(EXPAT_LIB)
+
+Copied: src/core/conf.c (from rev 35, src/conf.c)
+
+Copied: src/core/conf.h (from rev 35, src/conf.h)
+===================================================================
+--- src/conf.h	2005-05-29 13:02:58 UTC (rev 35)
++++ src/core/conf.h	2005-06-02 22:39:56 UTC (rev 36)
+@@ -0,0 +1,18 @@
++#ifndef conf_header_
++#define conf_header_
++
++#include "egxp/egxp.h"
++
++
++
++int eim_config_init (Egxp * eg);
++
++
++void eim_config_save ();
++
++
++void eim_config_shutdown ();
++
++
++
++#endif
+
+Added: src/core/eim.c
+===================================================================
+--- src/core/eim.c	2005-05-29 13:02:58 UTC (rev 35)
++++ src/core/eim.c	2005-06-02 22:39:56 UTC (rev 36)
+@@ -0,0 +1,40 @@
++#include <assert.h>
++#include <stdlib.h>
++#include "eim.h"
++
++
++Eim * eim_new () {
++#ifdef CORE_DEBUG
++  printf("TRACE: eim_new\n");
++#endif
++  Eim * tmp = EIM(malloc(sizeof(Eim)));
++  
++  tmp->egxps = ecore_list_new ();
++  ecore_list_set_free_cb (tmp->egxps, egxp_free);
++
++  return tmp;
++}
++
++
++
++void eim_config_init (Eim *e) {
++#ifdef CORE_DEBUG
++  printf("TRACE: eim_initialize\n");
++#endif
++  assert (e);
++
++  
++
++}
++
++
++
++void eim_free (Eim *e) {
++#ifdef CORE_DEBUG
++  printf("TRACE: eim_free\n");
++#endif
++  assert (e);
++  
++  if (e->egxps!= NULL) ecore_list_destroy (e->egxps);
++  FREE (e);
++}
+
+Added: src/core/eim.h
+===================================================================
+--- src/core/eim.h	2005-05-29 13:02:58 UTC (rev 35)
++++ src/core/eim.h	2005-06-02 22:39:56 UTC (rev 36)
+@@ -0,0 +1,40 @@
++#ifndef eim_headers_
++#define eim_headers_
++
++
++#include <Ecore_Data.h>
++
++#include "egxp/egxp.h"
++
++
++typedef struct _Eim Eim;
++#define EIM(o) ((Eim*)o)
++
++struct _Eim {
++  /* need to keep a list of Egxp Structure */
++  Ecore_List * egxps;
++
++};
++
++
++/**
++ * Allocate the eim structure
++ * - initialize the egxps list
++ */
++Eim * eim_new ();
++
++
++/**
++ * Initialize the eim strutcure
++ * - try to read the configuration file
++ */
++void eim_config_init (Eim *e);
++
++
++/**
++ * Free the eim structure
++ */
++void eim_free (Eim *e);
++
++
++#endif
+
+Deleted: src/eim.c
+===================================================================
+--- src/eim.c	2005-05-29 13:02:58 UTC (rev 35)
++++ src/eim.c	2005-06-02 22:39:56 UTC (rev 36)
+@@ -1,123 +0,0 @@
+-/*
+-   $Id$
+-
+-   Copyright (C) 2005 Jo?l Vennin < joel.vennin _ at _ gmail _dot_ com >
+-   Part of the Eim Project http://eim.berlios.de
+-
+-   Eim is free software; you can redistribute it and/or modify
+-   it under the terms of the GNU General Public License as published by
+-   the Free Software Foundation; either version 2 of the License, or
+-   (at your option) any later version.
+-
+-   Eim is distributed in the hope that it will be useful,
+-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-   GNU General Public License for more details.
+-
+-   You should have received a copy of the GNU General Public License
+-   along with Eim; if not, write to the Free Software
+-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+-*/
+-#include <stdio.h>
+-#include <stdlib.h>
+-#include <Ecore.h>
+-#include <Ecore_Con.h>
+-
+-#include <Ewl.h>
+-
+-#include "egxp/egxp.h"
+-#include "gui/gui_main.h"
+-#include "conf.h"
+-
+-
+-static int eim_handler_signal_exit (void *data, int ev_type, void *ev) {
+-  Ecore_Event_Signal_Exit *e = ev;
+-  
+-  /*  
+-  if (e->interrupt)
+-    printf ("%s exit: interrupt\n", PACKAGE);
+-  if (e->quit)
+-    printf ("%s exit: quit\n", PACKAGE);
+-  if (e->terminate)
+-    printf ("%s exit: terminate\n", PACKAGE);
+-  */
+-  ecore_main_loop_quit ();
+-
+-  return 1;
+-}
+-
+-
+-int main (int argc, char **argv) {
+-  int          c = 0;
+-  char         theme_file[PATH_MAX];
+-  int          got_theme_file = FALSE;
+-  struct stat  statbuf;
+-  
+-  /* parse the command line */
+-  while ( (c = getopt (argc, argv, "ht")) != -1) {
+-    
+-    switch (c) {
+-    case 'h':
+-      printf ("Usage: %s [OPTION] ...\n\n", argv[0]);
+-      printf ("  -h        \t display this help and exit\n");
+-      printf ("  -t THEME  \t specify an edje theme file (.eet)\n");
+-      
+-      exit (-1);
+-      break;
+-    case 't':
+-      got_theme_file = TRUE;
+-      snprintf (theme_file, PATH_MAX, "%s", (char *) argv[optind]);
+-      break;
+-    };
+-  }
+-  
+-  
+-  /* check if there is a valid theme file */
+-  if (got_theme_file) {
+-    stat (theme_file, &statbuf);
+-    if (!S_ISREG(statbuf.st_mode)) {
+-      fprintf (stderr, "error: themefile '%s' does not exist!\n", 
+-	       theme_file);
+-      exit (-1);
+-    }
+-  }
+-  
+-  
+-  /* initialize the core */
+-  if (!ecore_init()) {
+-    printf("ERROR: can't initialize Ecore.\n");
+-    return -1;
+-  }
+-  if (!ewl_init(&argc, argv)) {
+-    printf("ERROR: can't initialize Ewl\n");
+-    return -1;
+-  }
+-
+-  ecore_event_handler_add (ECORE_EVENT_SIGNAL_EXIT, eim_handler_signal_exit, NULL);
+-
+-  if (!ecore_con_init ()){
+-    printf("ERROR: can't initialize Ecore Connection\n");
+-    return -1;
+-  }
+-
+-  /* define the args */
+-  ecore_app_args_set (argc, (const char **) argv);
+-
+-  Egxp * eg = egxp_new ();
+-
+-  eim_config_init (eg);
+-  
+-
+-  if (gui_main_init2 ("eim", theme_file)) return -1;
+-  
+-  /* process the main loop */
+-  ecore_main_loop_begin ();
+-  printf("Here\n");
+-
+-  /* shutdown all ecore service */
+-  eim_config_shutdown ();
+-  ewl_shutdown ();
+-  ecore_shutdown ();
+-  
+-  return 0;
+-}
+
+Modified: src/gui/properties.c
+===================================================================
+--- src/gui/properties.c	2005-05-29 13:02:58 UTC (rev 35)
++++ src/gui/properties.c	2005-06-02 22:39:56 UTC (rev 36)
+@@ -3,48 +3,13 @@
+ #include "properties.h"
+ 
+ 
+-/**
+- * Define the properties for the Properties page.
+- * It contains all parameters available inside the Egxp and its extension
+- * We use this structure has temporary variable.
+- */
+-typedef struct _Properties Properties;
+-#define PROPERTIES(o) ((Properties*)o)
+-struct _Properties {
+-  /* account */
+-  char * jabber_id;
+-  char * password;
+-  char * resource;
+-  int priority;
+ 
+-  /* connection */
+-  int use_ssl;
+-  int allow_plaintext;
+-  int send_keep_alive;
+-  // manual server host port
+ 
+-  /* details */
+ 
+-  /* preferences */
+-  int auto_connect;
+-  int auto_reconnect;
+-  int log_history;
+-  int ignore_ssl_warning;
+-};
+ 
+ 
+ 
+-Properties * _properties_new () {
+-  Properties * tmp = PROPERTIES(malloc (sizeof(Properties)));
+-  memset (tmp, 0, sizeof (Properties));
+ 
+-  return tmp;
+-}
+-
+-
+-
+-
+-
+ /**
+  * Create the Account page and add it to the notebook
+  *  - jabber id
+
+Copied: src/main.c (from rev 35, src/eim.c)
+===================================================================
+--- src/eim.c	2005-05-29 13:02:58 UTC (rev 35)
++++ src/main.c	2005-06-02 22:39:56 UTC (rev 36)
+@@ -0,0 +1,123 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo?l Vennin < joel.vennin _ at _ gmail _dot_ com >
++   Part of the Eim Project http://eim.berlios.de
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++#include <stdio.h>
++#include <stdlib.h>
++#include <Ecore.h>
++#include <Ecore_Con.h>
++
++#include <Ewl.h>
++
++#include "egxp/egxp.h"
++#include "gui/gui_main.h"
++//#include "conf.h"
++
++
++static int eim_handler_signal_exit (void *data, int ev_type, void *ev) {
++  Ecore_Event_Signal_Exit *e = ev;
++  
++  /*  
++  if (e->interrupt)
++    printf ("%s exit: interrupt\n", PACKAGE);
++  if (e->quit)
++    printf ("%s exit: quit\n", PACKAGE);
++  if (e->terminate)
++    printf ("%s exit: terminate\n", PACKAGE);
++  */
++  ecore_main_loop_quit ();
++
++  return 1;
++}
++
++
++int main (int argc, char **argv) {
++  int          c = 0;
++  char         theme_file[PATH_MAX];
++  int          got_theme_file = FALSE;
++  struct stat  statbuf;
++  
++  /* parse the command line */
++  while ( (c = getopt (argc, argv, "ht")) != -1) {
++    
++    switch (c) {
++    case 'h':
++      printf ("Usage: %s [OPTION] ...\n\n", argv[0]);
++      printf ("  -h        \t display this help and exit\n");
++      printf ("  -t THEME  \t specify an edje theme file (.eet)\n");
++      
++      exit (-1);
++      break;
++    case 't':
++      got_theme_file = TRUE;
++      snprintf (theme_file, PATH_MAX, "%s", (char *) argv[optind]);
++      break;
++    };
++  }
++  
++  
++  /* check if there is a valid theme file */
++  if (got_theme_file) {
++    stat (theme_file, &statbuf);
++    if (!S_ISREG(statbuf.st_mode)) {
++      fprintf (stderr, "error: themefile '%s' does not exist!\n", 
++	       theme_file);
++      exit (-1);
++    }
++  }
++  
++  
++  /* initialize the core */
++  if (!ecore_init()) {
++    printf("ERROR: can't initialize Ecore.\n");
++    return -1;
++  }
++  if (!ewl_init(&argc, argv)) {
++    printf("ERROR: can't initialize Ewl\n");
++    return -1;
++  }
++
++  ecore_event_handler_add (ECORE_EVENT_SIGNAL_EXIT, eim_handler_signal_exit, NULL);
++
++  if (!ecore_con_init ()){
++    printf("ERROR: can't initialize Ecore Connection\n");
++    return -1;
++  }
++
++  /* define the args */
++  ecore_app_args_set (argc, (const char **) argv);
++
++  Egxp * eg = egxp_new ();
++
++  // eim_config_init (eg);
++  
++
++  if (gui_main_init2 ("eim", theme_file)) return -1;
++  
++  /* process the main loop */
++  ecore_main_loop_begin ();
++  printf("Here\n");
++
++  /* shutdown all ecore service */
++  // eim_config_shutdown ();
++  ewl_shutdown ();
++  ecore_shutdown ();
++  
++  return 0;
++}
+
+
+

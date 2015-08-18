@@ -1,0 +1,85 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r19 - src/egxp
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-February/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r19%20-%20src/egxp&In-Reply-To=%3C200502182100.j1IL05XA027899%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000014.html">
+   <LINK REL="Next"  HREF="000016.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r19 - src/egxp</H1>
+    <B>Holger Dell at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r19%20-%20src/egxp&In-Reply-To=%3C200502182100.j1IL05XA027899%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r19 - src/egxp">ylloh at sheep.berlios.de
+       </A><BR>
+    <I>Fri Feb 18 22:00:05 CET 2005</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000014.html">[Eim-svn] r18 - / src/egxp
+</A></li>
+        <LI>Next message: <A HREF="000016.html">[Eim-svn] r20 - / src/egxp src/xmpp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#15">[ date ]</a>
+              <a href="thread.html#15">[ thread ]</a>
+              <a href="subject.html#15">[ subject ]</a>
+              <a href="author.html#15">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: ylloh
+Date: 2005-02-18 22:00:04 +0100 (Fri, 18 Feb 2005)
+New Revision: 19
+
+Modified:
+   src/egxp/test.c
+Log:
+- you forgot to replace a call of egxp_opcode_display by egxp_opcode_print.
+
+
+Modified: src/egxp/test.c
+===================================================================
+--- src/egxp/test.c	2005-02-18 10:47:00 UTC (rev 18)
++++ src/egxp/test.c	2005-02-18 21:00:04 UTC (rev 19)
+@@ -39,7 +39,7 @@
+   
+ 
+   /* display information about opcode */
+-  egxp_opcode_display (eg-&gt;opcodes);
++  egxp_opcode_print (eg-&gt;opcodes);
+   
+   
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000014.html">[Eim-svn] r18 - / src/egxp
+</A></li>
+	<LI>Next message: <A HREF="000016.html">[Eim-svn] r20 - / src/egxp src/xmpp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#15">[ date ]</a>
+              <a href="thread.html#15">[ thread ]</a>
+              <a href="subject.html#15">[ subject ]</a>
+              <a href="author.html#15">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

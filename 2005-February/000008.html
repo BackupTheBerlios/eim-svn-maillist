@@ -1,0 +1,1111 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r12 - / src/egxp src/xmpp
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-February/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r12%20-%20/%20src/egxp%20src/xmpp&In-Reply-To=%3C200502131641.j1DGf1Ak023426%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000007.html">
+   <LINK REL="Next"  HREF="000009.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r12 - / src/egxp src/xmpp</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r12%20-%20/%20src/egxp%20src/xmpp&In-Reply-To=%3C200502131641.j1DGf1Ak023426%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r12 - / src/egxp src/xmpp">jol at sheep.berlios.de
+       </A><BR>
+    <I>Sun Feb 13 17:41:01 CET 2005</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000007.html">[Eim-svn] r11 - / src src/egxp src/xmpp
+</A></li>
+        <LI>Next message: <A HREF="000009.html">[Eim-svn] r13 - / src/egxp src/xmpp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8">[ date ]</a>
+              <a href="thread.html#8">[ thread ]</a>
+              <a href="subject.html#8">[ subject ]</a>
+              <a href="author.html#8">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-02-13 17:40:57 +0100 (Sun, 13 Feb 2005)
+New Revision: 12
+
+Added:
+   src/egxp/egxp_connection.c
+   src/egxp/egxp_connection.h
+   src/xmpp/xmpp_jid.c
+   src/xmpp/xmpp_jid.h
+   src/xmpp/xmpp_message.c
+   src/xmpp/xmpp_message.h
+Modified:
+   ChangeLog
+   TODO
+   src/egxp/Makefile.am
+   src/egxp/egxp.c
+   src/egxp/egxp.h
+   src/xmpp/Makefile.am
+   src/xmpp/test.c
+   src/xmpp/xmpp.c
+   src/xmpp/xmpp.h
+   src/xmpp/xmpp_callback.c
+   src/xmpp/xmpp_callback.h
+   src/xmpp/xmpp_opcode.c
+   src/xmpp/xmpp_opcode.h
+   src/xmpp/xmpp_struct.h
+Log:
+- Add connection control inside egxp. So it's now possible to 
+  connect/disconnect  and get/send message to a server.
+- Add a first support to jid (malloc and free :)
+- Add a beginning to send xmpp message.
+- Update the xmpp test example. You can only connect to a server. 
+  But the test code allow you to understand how the future will be to add 
+  jabber extension protocol.
+- Minor fix and improvement.
+
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-02-13 01:13:42 UTC (rev 11)
++++ ChangeLog	2005-02-13 16:40:57 UTC (rev 12)
+@@ -1,6 +1,15 @@
+ 2005-02-13(jol):
++	- Add connection control inside egxp. So it's now possible to connect/disconnect 
++	  and get/send message to a server.
++	- Add a first support to jid (malloc and free :)
++	- Add a beginning to send xmpp message.
++	- Update the xmpp test example. You can only connect to a server. 
++	  But the test code allow you to understand how the future will be to add 
++	  jabber extension protocol.
++	- Minor fix and improvement.
+ 	- begin the xmpp part.
+ 	- add the extension concept inside the Egxp structure
++	
+ 2005-02-12(jol):
+ 	- factorize some code inside egxp_protocol_handler.
+ 	- finished the protocol handler xml part.
+
+Modified: TODO
+===================================================================
+--- TODO	2005-02-13 01:13:42 UTC (rev 11)
++++ TODO	2005-02-13 16:40:57 UTC (rev 12)
+@@ -1,5 +1,6 @@
+ HIGH URGENCY
+-- implement the receive callback to give data to the XML Parser
++- implement the xmpp_message_stream to give a connection example
++- implement the xmpp_callback_stream_begin_cb to show how handle received data
+ 
+ LOW URGENCY
+ - Should change the egxp_message to handle integer tag instead of char * tag.
+
+Modified: src/egxp/Makefile.am
+===================================================================
+--- src/egxp/Makefile.am	2005-02-13 01:13:42 UTC (rev 11)
++++ src/egxp/Makefile.am	2005-02-13 16:40:57 UTC (rev 12)
+@@ -16,7 +16,8 @@
+ 	egxp_node.h          \
+ 	egxp_opcode.h        \
+ 	egxp.h               \
+-	egxp_protocol_handler.h
++	egxp_protocol_handler.h \
++	egxp_connection.h
+ 
+ 
+ libegxp_la_SOURCES = \
+@@ -25,7 +26,8 @@
+ 	egxp_node.c         \
+ 	egxp_opcode.c       \
+ 	egxp.c              \
+-	egxp_protocol_handler.c
++	egxp_protocol_handler.c \
++	egxp_connection.c
+ 
+ libegxp_la_LIBADD = $(ecore_libs) $(IDN_LIBS) $(EXPAT_LIB)
+ libegxp_la_CFLAGS = $(ecore_cflags) $(IDN_CFLAGS) $(EXPAT_INCLUDE)
+
+Modified: src/egxp/egxp.c
+===================================================================
+--- src/egxp/egxp.c	2005-02-13 01:13:42 UTC (rev 11)
++++ src/egxp/egxp.c	2005-02-13 16:40:57 UTC (rev 12)
+@@ -23,6 +23,8 @@
+ #include &lt;stdlib.h&gt;
+ #include &quot;egxp.h&quot;
+ 
++typedef int (*Handler_Func) (void *data, int type, void *event);
++
+ Egxp * egxp_new () {
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_new\n&quot;);
+@@ -41,6 +43,14 @@
+   /* define the protocol handler */
+   tmp-&gt;protocol_handler = egxp_protocol_handler_new (tmp);
+ 
++  /* register the callback function */
++  tmp-&gt;receive_cb = ecore_event_handler_add (ECORE_CON_EVENT_SERVER_DATA,
++					     (Handler_Func) egxp_protocol_handler_receive_server_cb,
++					     tmp);
++  
++  /* initialize the connection */
++  tmp-&gt;connection = NULL;
++
+   /* initialzie extension */
+   tmp-&gt;extensions = NULL;
+ 
+@@ -55,13 +65,16 @@
+   assert (e);
+   /* free opcode */
+   egxp_opcode_free (e-&gt;opcodes);
++  /* remove the event handler of the server */
++  if (e-&gt;receive_cb) ecore_event_handler_del (e-&gt;receive_cb);
+   /* free node */
+   if (e-&gt;root) egxp_node_free(e-&gt;root);
+   /* free protocol handler */
+   if (e-&gt;protocol_handler) egxp_protocol_handler_free (e-&gt;protocol_handler);
++  /* free connection */
++  if (e-&gt;connection) egxp_connection_free (e-&gt;connection);
+   /* free extension */
+   if (e-&gt;extensions) ecore_hash_destroy (e-&gt;extensions);
+-  
+   free (e);
+ }
+ 
+@@ -87,6 +100,9 @@
+     ecore_hash_set_free_value (e-&gt;extensions, egxp_extension_free);
+   }
+   
++  /* define the parent */
++  EGXP_EXTENSION (ext)-&gt;parent = e;
++  /* add the extension to the hash */
+   ecore_hash_set (e-&gt;extensions, (int*)id, ext);
+ }
+ 
+
+Modified: src/egxp/egxp.h
+===================================================================
+--- src/egxp/egxp.h	2005-02-13 01:13:42 UTC (rev 11)
++++ src/egxp/egxp.h	2005-02-13 16:40:57 UTC (rev 12)
+@@ -23,6 +23,7 @@
+ #define egxp_header_h_
+ 
+ #include &lt;Ecore_Data.h&gt;
++#include &lt;Ecore.h&gt;
+ 
+ #include &quot;egxp_node_struct.h&quot;
+ #include &quot;egxp_node.h&quot;
+@@ -30,8 +31,8 @@
+ #include &quot;egxp_condition.h&quot;
+ #include &quot;egxp_message.h&quot;
+ #include &quot;egxp_protocol_handler.h&quot;
++#include &quot;egxp_connection.h&quot;
+ 
+-
+ typedef struct _Egxp Egxp;
+ #define EGXP(o) ((Egxp*)o)
+ struct _Egxp {
+@@ -44,18 +45,29 @@
+   /* the protocol handler */
+   Egxp_ProtocolHandler * protocol_handler;
+ 
++  /* The connection object */
++  Egxp_Connection * connection;
++  
+   /* contains data */
+   Ecore_Hash * extensions;
+ 
+   /* specific user data */
+   void * user_data;
++
++  /* Event handler of ecore server 
++     maybe it's not necessary to store it
++  */
++  Ecore_Event_Handler * receive_cb;
+ };
+ 
+ 
+ typedef struct _Egxp_Extension Egxp_Extension;
+ #define EGXP_EXTENSION(o) ((Egxp_Extension*)o)
+ struct _Egxp_Extension {
++  /* this call back is used to destroy this structure itself. */
+   Ecore_Free_Cb destroy;
++  /* a pointer to the egxp structure */
++  Egxp * parent;
+ };
+ 
+ 
+
+Added: src/egxp/egxp_connection.c
+===================================================================
+--- src/egxp/egxp_connection.c	2005-02-13 01:13:42 UTC (rev 11)
++++ src/egxp/egxp_connection.c	2005-02-13 16:40:57 UTC (rev 12)
+@@ -0,0 +1,116 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++#include &lt;stdlib.h&gt;
++#include &lt;stdio.h&gt;
++#include &lt;string.h&gt;
++#include &lt;assert.h&gt;
++
++#include &quot;egxp_connection.h&quot;
++
++Egxp_Connection * egxp_connection_new (char * address, unsigned int port, unsigned char use_ssl) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_connection_new\n&quot;);
++#endif
++  assert (address);
++  
++  Egxp_Connection * tmp = EGXP_CONNECTION (malloc (sizeof(Egxp_Connection)));
++ 
++  tmp-&gt;server = NULL;
++  tmp-&gt;host_addr = strdup (address);
++  tmp-&gt;use_ssl = use_ssl;
++  tmp-&gt;port = port;
++  
++  return tmp;
++}
++
++
++void egxp_connection_free (Egxp_Connection *c) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_connection_free\n&quot;);
++#endif 
++  assert (c);
++  /* free the addr */
++  IF_FREE (c-&gt;host_addr);
++  /* disconnect from the server */
++  egxp_connection_disconnect (c);
++  /* free this object */
++  FREE (c);
++}
++
++unsigned int egxp_connection_connect (Egxp_Connection *c) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_connection_connect\n&quot;);
++#endif
++  assert (c);
++
++  /* call disconnect to be sure that we are currently connected */
++  if (c-&gt;server) egxp_connection_disconnect (c);
++  
++  /* set the connection flags */
++  int flags = ECORE_CON_REMOTE_SYSTEM;
++  if (c-&gt;use_ssl) flags = flags | ECORE_CON_USE_SSL;
++ 
++  /* try to connect */
++  c-&gt;server = ecore_con_server_connect(flags, c-&gt;host_addr,
++				       c-&gt;port, NULL);
++  /* test if the connection is ok*/
++  if (c-&gt;server == NULL) return 0;
++  
++  /* on success */
++  return 1;
++}
++
++
++void egxp_connection_send_message (Egxp_Connection *c, Egxp_Message * msg) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_connection_send_message\n&quot;);
++#endif
++  assert (c &amp;&amp; msg);
++
++  // to xml
++  char * buf = egxp_message_to_xml (msg, 1);
++  printf(&quot;log send: %s\n&quot;, buf);
++  
++  // free message
++  egxp_message_free (msg);
++  
++  // send it !
++  ecore_con_server_send (c-&gt;server, buf, strlen (buf));
++  
++  // free message
++  FREE (buf);
++}
++
++
++void egxp_connection_disconnect (Egxp_Connection * c) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_connection_disconnect\n&quot;);
++#endif
++
++  assert (c);
++
++  if (c-&gt;server) {
++    /* warning FIXME, i don't how close connection work ... */
++    printf(&quot;egxp_connection_disconnect:: FIXME %s\n&quot;, __FILE__);
++    // ecore_con_server_del (c-&gt;server);
++    c-&gt;server = NULL;
++  }
++}
+
+Added: src/egxp/egxp_connection.h
+===================================================================
+--- src/egxp/egxp_connection.h	2005-02-13 01:13:42 UTC (rev 11)
++++ src/egxp/egxp_connection.h	2005-02-13 16:40:57 UTC (rev 12)
+@@ -0,0 +1,88 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++#ifndef egxp_connection_header_h_
++#define egxp_connection_header_h_
++
++#include &lt;Ecore_Con.h&gt;
++
++#include &quot;egxp_message.h&quot;
++
++/**
++ * There is a set of function to handle connection properties
++ */
++typedef struct _Egxp_Connection Egxp_Connection;
++#define EGXP_CONNECTION(o) ((Egxp_Connection*)o)
++struct _Egxp_Connection {
++  
++  /* a reference on the server */
++  Ecore_Con_Server * server;
++  
++  /* address to the host */
++  char * host_addr;
++
++  /* a flag to know if we use ssl connection */
++  unsigned char use_ssl;
++  
++  /* the port to connect */
++  unsigned int port;
++};
++
++
++/**
++ * This method allocate a Egxp_Connection structure
++ * @param address: The address use to connect
++ * @param port: the port number
++ * @param use_ssl: 1 if you want to connect in ssl mode, 0 otherwise.
++ * @return Egxp_Connection structure.
++ */
++Egxp_Connection * egxp_connection_new (char * address, unsigned int port, unsigned char use_ssl);
++
++
++
++/**
++ * Free the Egxp_Connection structure.
++ * @param c: The connection object
++ */
++void egxp_connection_free (Egxp_Connection *c);
++
++/**
++ * This method try to connection to the server.
++ * @param c: The connection structure
++ * @return 1 when success, 0 otherwise
++ */
++unsigned int egxp_connection_connect (Egxp_Connection *c);
++
++
++/**
++ * This method try to send a message. It destroy the message
++ * object after send it.
++ * @param c: The connection object
++ * @param msg: The message
++ */
++void egxp_connection_send_message (Egxp_Connection *c, Egxp_Message * msg);
++
++
++/**
++ * Disconnect the server
++ */
++void egxp_connection_disconnect (Egxp_Connection * c);
++
++#endif
+
+Modified: src/xmpp/Makefile.am
+===================================================================
+--- src/xmpp/Makefile.am	2005-02-13 01:13:42 UTC (rev 11)
++++ src/xmpp/Makefile.am	2005-02-13 16:40:57 UTC (rev 12)
+@@ -15,11 +15,15 @@
+ 	xmpp_opcode.h    \
+ 	xmpp_callback.h  \
+ 	xmpp_struct.h    \
+-	xmpp.h
++	xmpp.h           \
++	xmpp_jid.h       \
++	xmpp_message.h
+ 
+ libxmpp_la_SOURCES = \
+ 	xmpp_opcode.c    \
+ 	xmpp_callback.c  \
+-	xmpp.c
++	xmpp.c           \
++	xmpp_jid.c       \
++	xmpp_message.c
+ 
+ libxmpp_la_CFLAGS = $(ecore_cflags) $(IDN_CFLAGS) $(EXPAT_INCLUDE) -I$(top_srcdir)/src
+
+Modified: src/xmpp/test.c
+===================================================================
+--- src/xmpp/test.c	2005-02-13 01:13:42 UTC (rev 11)
++++ src/xmpp/test.c	2005-02-13 16:40:57 UTC (rev 12)
+@@ -1,20 +1,59 @@
+ #include &lt;stdio.h&gt;
++#include &lt;stdlib.h&gt;
+ 
++#include &lt;Ecore.h&gt;
++
+ #include &quot;egxp/egxp.h&quot;
+ #include &quot;xmpp.h&quot;
+ 
++
++int timer_cb (void * user_data) {
++  ecore_main_loop_quit ();
++}
++
+ int main (int argc, char ** argv) {
+   
+-  /* create the protocol grammar */
++  /**
++   * usage
++   */
++  if (argc != 5) {
++    printf(&quot;usage:\n\t%s &lt;name&gt; &lt;host_addr&gt; &lt;port_number&gt; &lt;password&gt;\n&quot;,argv[0]);
++    return 1;
++  }
++
++  /* create Egxp  */
+   Egxp * eg = egxp_new ();
+   
+-  /* init opcode */
+-  xmpp_register (eg);
++  /* initialize protocol */
++  Xmpp * xm = xmpp_register (eg);
++  
++  
++  /* initialize ecore connection */
++  ecore_con_init();
++  /* after 3 second we quit the ecore loop */
++  ecore_timer_add (8, timer_cb, NULL);
++  printf(&quot;Quit automaticly (after 8 seconds)\n&quot;);
++  
++  /* define the connection */
++  eg-&gt;connection = egxp_connection_new (argv[2], atoi (argv[3]), 0);
++  if (egxp_connection_connect (eg-&gt;connection) == 0) {
++    printf(&quot;Impossible to connect to %s %s\n&quot;, argv[2], argv[3]);
++  } else {
++    printf(&quot;We are connected to %s:%s\n&quot;, argv[2], argv[3]);
++  }
++  
++  /* define the jid */
++  xm-&gt;jid = xmpp_jid_new (argv[1], argv[2], &quot;eim&quot;);
++  
++  /* now we can send a message to the server */
++  
+ 
+-  /* display opcode */
+-  egxp_opcode_display (eg-&gt;opcodes);
++  /* ecore loop */
++  ecore_main_loop_begin();
++  /* shutdown */
++  ecore_con_shutdown();
+   
+-  /* free opcode */
++  /* free Egxp */
+   egxp_free (eg);
+   
+   return 0;
+
+Modified: src/xmpp/xmpp.c
+===================================================================
+--- src/xmpp/xmpp.c	2005-02-13 01:13:42 UTC (rev 11)
++++ src/xmpp/xmpp.c	2005-02-13 16:40:57 UTC (rev 12)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #include &lt;stdio.h&gt;
+ #include &lt;assert.h&gt;
+ #include &quot;xmpp.h&quot;
+@@ -3,5 +23,5 @@
+ 
+ 
+-void xmpp_register (Egxp * eg) {
++Xmpp * xmpp_register (Egxp * eg) {
+ #ifdef XMPP_DEBUG
+   printf(&quot;TRACE: xmpp_register\n&quot;);
+@@ -17,6 +37,8 @@
+   Xmpp * tmp = xmpp_new (eg);
+   /* register the structure */
+   egxp_extension_register (eg, id, tmp);
++  
++  return tmp;
+ }
+ 
+ 
+@@ -33,7 +55,10 @@
+   
+   /* define the destroy function */
+   tmp-&gt;extension.destroy = ECORE_FREE_CB(xmpp_free);
+-  
++
++  /* set the user name */
++  tmp-&gt;jid = NULL;
++
+   /* return the xmpp */
+   return tmp;
+ }
+@@ -45,6 +70,8 @@
+ #endif
+   
+   assert (x);
++
++  if (x-&gt;jid) xmpp_jid_free(x-&gt;jid);
+   
+   FREE (x);
+ }
+
+Modified: src/xmpp/xmpp.h
+===================================================================
+--- src/xmpp/xmpp.h	2005-02-13 01:13:42 UTC (rev 11)
++++ src/xmpp/xmpp.h	2005-02-13 16:40:57 UTC (rev 12)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #ifndef xmpp_header_h_
+ #define xmpp_header_h_
+ 
+@@ -6,8 +26,8 @@
+ #include &quot;xmpp_struct.h&quot;
+ #include &quot;xmpp_opcode.h&quot;
+ #include &quot;xmpp_callback.h&quot;
++#include &quot;xmpp_jid.h&quot;
+ 
+-
+ #define XMPP_REGISTER &quot;__XMPP_REGISTER__&quot;
+ 
+ /**
+@@ -15,8 +35,9 @@
+  *  - initialize the xmpp structure
+  *  - register opcode and protocol node
+  * @param eg: The Egpx structure
++ * @return the Xmpp object
+  */
+-void xmpp_register (Egxp * eg);
++Xmpp * xmpp_register (Egxp * eg);
+ 
+ 
+ /**
+@@ -30,4 +51,11 @@
+  */
+ void xmpp_free (Xmpp * x);
+ 
++
++/**
++ * Set the user name
++ * @param x: The xmpp object
++ * @param name: The name of the user
++ */
++
+ #endif
+
+Modified: src/xmpp/xmpp_callback.c
+===================================================================
+--- src/xmpp/xmpp_callback.c	2005-02-13 01:13:42 UTC (rev 11)
++++ src/xmpp/xmpp_callback.c	2005-02-13 16:40:57 UTC (rev 12)
+@@ -1,3 +1,25 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++#include &lt;assert.h&gt;
++
+ #include &quot;xmpp_callback.h&quot;
+ 
+ 
+
+Modified: src/xmpp/xmpp_callback.h
+===================================================================
+--- src/xmpp/xmpp_callback.h	2005-02-13 01:13:42 UTC (rev 11)
++++ src/xmpp/xmpp_callback.h	2005-02-13 16:40:57 UTC (rev 12)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #ifndef xmpp_opcode_header_h_
+ #define xmpp_opcode_header_h_
+ 
+
+Added: src/xmpp/xmpp_jid.c
+===================================================================
+--- src/xmpp/xmpp_jid.c	2005-02-13 01:13:42 UTC (rev 11)
++++ src/xmpp/xmpp_jid.c	2005-02-13 16:40:57 UTC (rev 12)
+@@ -0,0 +1,55 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++#include &lt;assert.h&gt;
++#include &lt;stdlib.h&gt;
++#include &lt;stdio.h&gt;
++
++#include &lt;Ecore_Data.h&gt;
++
++#include &quot;xmpp_jid.h&quot;
++
++
++Xmpp_JID * xmpp_jid_new (char * user, char * host, char * resource) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_jid_new\n&quot;);
++#endif 
++  
++  Xmpp_JID * tmp = XMPP_JID(malloc (sizeof(Xmpp_JID)));
++  
++  tmp-&gt;user = strdup (user);
++  tmp-&gt;host = strdup (host);
++  tmp-&gt;resource = strdup (resource);
++
++  return tmp;
++}
++
++void xmpp_jid_free (Xmpp_JID * jid) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_jid_free\n&quot;);
++#endif 
++  assert (jid);
++
++  IF_FREE (jid-&gt;user);
++  IF_FREE (jid-&gt;host);
++  IF_FREE (jid-&gt;resource);
++
++  FREE (jid);
++}
+
+Added: src/xmpp/xmpp_jid.h
+===================================================================
+--- src/xmpp/xmpp_jid.h	2005-02-13 01:13:42 UTC (rev 11)
++++ src/xmpp/xmpp_jid.h	2005-02-13 16:40:57 UTC (rev 12)
+@@ -0,0 +1,52 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++#ifndef xmpp_jid_header_h_
++#define xmpp_jid_header_h_
++
++/**
++ * Here we define the Jid structure and a set of function
++ * to handle the jid
++ */
++
++typedef struct _Xmpp_JID Xmpp_JID;
++#define XMPP_JID(o) ((Xmpp_JID*)o)
++struct _Xmpp_JID {
++  char * user;
++  char * host;
++  char * resource;
++};
++
++
++/**
++ * Create a new JID
++ * @param user: The user name
++ * @param host: The host name
++ * @param resource: The resource
++ */
++Xmpp_JID * xmpp_jid_new (char * user, char * host, char * resource);
++
++/**
++ * Free the structure
++ */
++void xmpp_jid_free (Xmpp_JID * jid);
++
++
++#endif
+
+Added: src/xmpp/xmpp_message.c
+===================================================================
+--- src/xmpp/xmpp_message.c	2005-02-13 01:13:42 UTC (rev 11)
++++ src/xmpp/xmpp_message.c	2005-02-13 16:40:57 UTC (rev 12)
+@@ -0,0 +1,65 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++#include &lt;assert.h&gt;
++#include &lt;stdlib.h&gt;
++
++#include &quot;egxp/egxp_message.h&quot;
++
++#include &quot;xmpp_opcode.h&quot;
++#include &quot;xmpp_message.h&quot;
++
++
++
++int xmpp_message_stream (Xmpp * x) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_message_stream\n&quot;);
++#endif
++  
++  assert (x);
++
++  /**
++   * Make the stream message
++   */
++  Egxp_Message * message = egxp_message_new (XMPP_TAG_STREAM);
++  egxp_message_add_attribute (message, 
++			      egxp_message_attribute_new (XMPP_ATT_XMLNS, 
++							  XMPP_VALUE_STREAM_XMLNS));
++  egxp_message_add_attribute (message, 
++			      egxp_message_attribute_new (XMPP_ATT_XMLNS_STREAM, 
++							  XMPP_VALUE_STREAM_XMLNS_STREAM));
++  egxp_message_add_attribute (message, 
++			      egxp_message_attribute_new (XMPP_ATT_VERSION, 
++							  XMPP_VALUE_STREAM_VERSION));
++  egxp_message_add_attribute (message, 
++			      egxp_message_attribute_new (XMPP_ATT_TO, 
++							  x-&gt;jid-&gt;host));
++  
++  /* to xml */
++  char * buf = egxp_message_to_xml (message, 0);
++  
++  /* free message */
++  egxp_message_free (message);
++
++  // to be continued ...
++  
++  /* free buffer */
++  FREE(buf);
++}
+
+Added: src/xmpp/xmpp_message.h
+===================================================================
+--- src/xmpp/xmpp_message.h	2005-02-13 01:13:42 UTC (rev 11)
++++ src/xmpp/xmpp_message.h	2005-02-13 16:40:57 UTC (rev 12)
+@@ -0,0 +1,33 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++#ifndef xmpp_message_header_h_
++#define xmpp_message_header_h_
++
++#include &quot;xmpp_struct.h&quot;
++
++/**
++ * It defines the messages send to the server.
++ * @param x: The Xmpp structure
++ */
++int xmpp_message_stream (Xmpp * x);
++
++
++#endif
+
+Modified: src/xmpp/xmpp_opcode.c
+===================================================================
+--- src/xmpp/xmpp_opcode.c	2005-02-13 01:13:42 UTC (rev 11)
++++ src/xmpp/xmpp_opcode.c	2005-02-13 16:40:57 UTC (rev 12)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #include &lt;assert.h&gt;
+ 
+ #include &quot;egxp/egxp_node.h&quot;
+@@ -2,2 +22,3 @@
+ 
++#include &quot;xmpp_callback.h&quot;
+ #include &quot;xmpp_opcode.h&quot;
+@@ -40,4 +61,6 @@
+   egxp_node_add_condition (stream, egxp_condition_new (egxp_opcode_get_id (eg-&gt;opcodes, XMPP_ATT_XMLNS_STREAM),
+ 						       egxp_opcode_get_id (eg-&gt;opcodes, XMPP_VALUE_STREAM_XMLNS_STREAM)));
+   
++  egxp_node_set_cb (stream, xmpp_callback_stream_begin_cb, NULL);
++  
+ }
+
+Modified: src/xmpp/xmpp_opcode.h
+===================================================================
+--- src/xmpp/xmpp_opcode.h	2005-02-13 01:13:42 UTC (rev 11)
++++ src/xmpp/xmpp_opcode.h	2005-02-13 16:40:57 UTC (rev 12)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #ifndef xmpp_core_header_h_
+ #define xmpp_core_header_h_
+ 
+
+Modified: src/xmpp/xmpp_struct.h
+===================================================================
+--- src/xmpp/xmpp_struct.h	2005-02-13 01:13:42 UTC (rev 11)
++++ src/xmpp/xmpp_struct.h	2005-02-13 16:40:57 UTC (rev 12)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #ifndef xmpp_struct_header_h_
+ #define xmpp_struct_header_h_
+ 
+@@ -5,13 +25,16 @@
+ 
+ #include &quot;egxp/egxp.h&quot;
+ 
++#include &quot;xmpp_jid.h&quot;
++
+ typedef struct _Xmpp Xmpp;
+ #define XMPP(o) ((Xmpp*)o)
+ struct _Xmpp {
+   /* This variable is really important, it's used to destroy itself */
+   Egxp_Extension extension;
+   
+-  int t;
++  /* the jid */
++  Xmpp_JID * jid;
+ };
+ 
+ #endif
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000007.html">[Eim-svn] r11 - / src src/egxp src/xmpp
+</A></li>
+	<LI>Next message: <A HREF="000009.html">[Eim-svn] r13 - / src/egxp src/xmpp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8">[ date ]</a>
+              <a href="thread.html#8">[ thread ]</a>
+              <a href="subject.html#8">[ subject ]</a>
+              <a href="author.html#8">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

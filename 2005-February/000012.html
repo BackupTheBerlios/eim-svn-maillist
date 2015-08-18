@@ -1,0 +1,716 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r16 - / src/egxp src/xmpp
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-February/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r16%20-%20/%20src/egxp%20src/xmpp&In-Reply-To=%3C200502172252.j1HMqFc0028630%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000011.html">
+   <LINK REL="Next"  HREF="000013.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r16 - / src/egxp src/xmpp</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r16%20-%20/%20src/egxp%20src/xmpp&In-Reply-To=%3C200502172252.j1HMqFc0028630%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r16 - / src/egxp src/xmpp">jol at sheep.berlios.de
+       </A><BR>
+    <I>Thu Feb 17 23:52:15 CET 2005</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000011.html">[Eim-svn] r15 - in src: egxp xmpp
+</A></li>
+        <LI>Next message: <A HREF="000013.html">[Eim-svn] r17 - / src/egxp src/xmpp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#12">[ date ]</a>
+              <a href="thread.html#12">[ thread ]</a>
+              <a href="subject.html#12">[ subject ]</a>
+              <a href="author.html#12">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-02-17 23:52:14 +0100 (Thu, 17 Feb 2005)
+New Revision: 16
+
+Modified:
+   ChangeLog
+   src/egxp/egxp.c
+   src/egxp/egxp_condition.c
+   src/egxp/egxp_message.c
+   src/egxp/egxp_opcode.c
+   src/egxp/egxp_protocol_handler.c
+   src/egxp/test.c
+   src/xmpp/test.c
+   src/xmpp/xmpp_auth.c
+   src/xmpp/xmpp_jid.c
+   src/xmpp/xmpp_message.c
+   src/xmpp/xmpp_opcode.c
+   src/xmpp/xmpp_opcode.h
+Log:
+- try to fix some memory leaks
+- minor changes
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-02-15 21:57:22 UTC (rev 15)
++++ ChangeLog	2005-02-17 22:52:14 UTC (rev 16)
+@@ -1,3 +1,6 @@
++2005-02-18(jol):
++	- Try to fix some memory leaks
++	
+ 2005-02-15(jol):
+ 	- now it's possible to connect to a server
+ 	- add the xmpp_auth file which should handle authentification process
+
+Modified: src/egxp/egxp.c
+===================================================================
+--- src/egxp/egxp.c	2005-02-15 21:57:22 UTC (rev 15)
++++ src/egxp/egxp.c	2005-02-17 22:52:14 UTC (rev 16)
+@@ -84,7 +84,8 @@
+   printf(&quot;TRACE: egxp_extension_free\n&quot;);
+ #endif
+   assert (e);
+-  
++
++  /* call the destroy function of the register */
+   Egxp_Extension * ext = EGXP_EXTENSION(e);
+   ext-&gt;destroy (e);
+ }
+
+Modified: src/egxp/egxp_condition.c
+===================================================================
+--- src/egxp/egxp_condition.c	2005-02-15 21:57:22 UTC (rev 15)
++++ src/egxp/egxp_condition.c	2005-02-17 22:52:14 UTC (rev 16)
+@@ -20,6 +20,8 @@
+ */
+ #include &lt;assert.h&gt;
+ #include &lt;stdio.h&gt;
++#include &lt;stdlib.h&gt;
++#include &lt;Ecore_Data.h&gt;
+ 
+ #include &quot;egxp_condition.h&quot;
+ 
+@@ -40,7 +42,7 @@
+ 
+   assert (condition != NULL);
+   
+-  free (condition);
++  FREE (condition);
+ }
+ 
+ 
+
+Modified: src/egxp/egxp_message.c
+===================================================================
+--- src/egxp/egxp_message.c	2005-02-15 21:57:22 UTC (rev 15)
++++ src/egxp/egxp_message.c	2005-02-17 22:52:14 UTC (rev 16)
+@@ -19,6 +19,7 @@
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+ 
++#include &lt;stdio.h&gt;
+ #include &lt;string.h&gt;
+ #include &lt;stdlib.h&gt;
+ #include &lt;assert.h&gt;
+@@ -32,6 +33,10 @@
+ /*****************************************************************************/
+ 
+ Egxp_Message * egxp_message_new (char * tag_name) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_message_new\n&quot;);
++#endif
++  
+   Egxp_Message * tmp = (Egxp_Message*) malloc (sizeof (Egxp_Message));
+   
+   /* copy the tag name */
+@@ -54,21 +59,29 @@
+ 
+ 
+ void egxp_message_free (Egxp_Message * m) {
+-  if (m == NULL) return;
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_message_free\n&quot;);
++#endif
+   
++  assert (m);
++  
+   FREE (m-&gt;tagname);
+   ecore_list_destroy (m-&gt;attributes);
+   ecore_list_destroy (m-&gt;childs);
+   
+   /* if attached to a parent, we remove the dependancies */
+   if (m-&gt;parent) {
+-    egxp_message_remove_child (m-&gt;parent, m);
++    // egxp_message_remove_child (m-&gt;parent, m);
+   }
+-  
++  IF_FREE (m-&gt;data);
+   FREE (m);
+ }
+ 
+ Egxp_Message * egxp_message_get_child (Egxp_Message *m, char * tagname) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_message_get_child\n&quot;);
++#endif
++
+   assert (m != NULL &amp;&amp; tagname != NULL);
+ 
+   ecore_list_goto_first(m-&gt;childs);
+@@ -82,6 +95,10 @@
+ }
+ 
+ Ecore_List * egxp_message_get_childs (Egxp_Message *m, char * tagname) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_message_get_childs\n&quot;);
++#endif
++
+   assert (m != NULL &amp;&amp; tagname != NULL);
+ 
+   Ecore_List * result = ecore_list_new ();
+@@ -98,6 +115,10 @@
+ 
+ 
+ void egxp_message_add_attribute (Egxp_Message *m, Egxp_MessageAttribute * ma) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_message_add_attribute\n&quot;);
++#endif
++  
+   if (m == NULL) return;
+   
+   ecore_list_append (m-&gt;attributes, ma);
+@@ -105,6 +126,10 @@
+ 
+ 
+ char * egxp_message_get_attribute (Egxp_Message *m, char * key) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_message_get_attribute\n&quot;);
++#endif
++
+   assert (m != NULL &amp;&amp; key != NULL);
+   
+   ecore_list_goto_first(m-&gt;attributes);
+@@ -117,6 +142,10 @@
+ }
+ 
+ void egxp_message_add_child (Egxp_Message *m, Egxp_Message * ma) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_message_add_child\n&quot;);
++#endif
++  
+   if (m == NULL || ma == NULL) return;
+   
+   ecore_list_append (m-&gt;childs, ma);
+@@ -124,6 +153,10 @@
+ }
+ 
+ void egxp_message_remove_child (Egxp_Message *m, Egxp_Message * ma) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_message_remove_child\n&quot;);
++#endif
++
+   assert (m != NULL &amp;&amp; ma != NULL);
+ 
+   ecore_list_goto_first(m-&gt;childs);
+@@ -138,6 +171,10 @@
+ 
+ 
+ void egxp_message_append_data (Egxp_Message *m, char * data, unsigned int size) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_message_append_data\n&quot;);
++#endif
++
+   assert (m!= NULL);
+ 
+   // i think we can just use realloc ... but i'm not sure about strcat 
+@@ -158,16 +195,27 @@
+ 
+ 
+ char * egxp_message_get_data (Egxp_Message *m) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_message_get_data\n&quot;);
++#endif
++
+   assert (m != NULL);
+   
+   /* if there is no data we return NULL */
+   if (m-&gt;data == NULL) return NULL;
+   
+-  return (char*)strndup (m-&gt;data, m-&gt;data_size);
++  char * buf = (char*) malloc ((m-&gt;data_size + 1) * sizeof (char));
++  strncpy (buf, m-&gt;data, m-&gt;data_size);
++  
++  return buf;
+ }
+ 
+ 
+ char * egxp_message_to_xml (Egxp_Message *m, unsigned int endtag) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_message_to_xml\n&quot;);
++#endif
++
+   int buf_len, len;
+   char * buf;
+ 
+@@ -251,6 +299,9 @@
+ }
+ 
+ void egxp_message_print(Egxp_Message *m) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_message_print\n&quot;);
++#endif
+   if (m == NULL) return;
+   char * buf = egxp_message_to_xml (m, 1);
+   printf(&quot;%s\n&quot;, buf);
+@@ -259,12 +310,18 @@
+ 
+ 
+ unsigned int egxp_message_is_empty (Egxp_Message *m) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_message_is_empty\n&quot;);
++#endif
+   assert (m != NULL);
+   return (ecore_list_is_empty (m-&gt;childs) &amp;&amp; m-&gt;data == NULL);
+ }
+ 
+ 
+ Egxp_MessageAttribute * egxp_message_attribute_new (char * key, char * value) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_message_attribute_new\n&quot;);
++#endif
+   Egxp_MessageAttribute * tmp = (Egxp_MessageAttribute *) malloc (sizeof (Egxp_MessageAttribute));
+   
+   tmp-&gt;key = strdup (key);
+@@ -274,6 +331,10 @@
+ }
+ 
+ void egxp_message_attribute_free (Egxp_MessageAttribute * ma) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_message_attribute_free\n&quot;);
++#endif
++
+   if (ma == NULL) return;
+   
+   FREE (ma-&gt;key);
+
+Modified: src/egxp/egxp_opcode.c
+===================================================================
+--- src/egxp/egxp_opcode.c	2005-02-15 21:57:22 UTC (rev 15)
++++ src/egxp/egxp_opcode.c	2005-02-17 22:52:14 UTC (rev 16)
+@@ -21,6 +21,7 @@
+ #include &lt;assert.h&gt;
+ #include &lt;stdlib.h&gt;
+ #include &lt;stdio.h&gt;
++#include &lt;string.h&gt;
+ 
+ #include &quot;egxp_opcode.h&quot;
+ 
+@@ -52,11 +53,11 @@
+   assert (op);
+   
+   /* free only the initial pointer */
+-  free (op-&gt;id_string);
++  IF_FREE (op-&gt;id_string);
+ 
+   // static string, so it's forbidden to destroy if (op-&gt;id_string) free (op-&gt;id_string);
+   ecore_hash_destroy (op-&gt;string_id);
+-  free (op);
++  FREE (op);
+ }
+ 
+ 
+@@ -71,6 +72,10 @@
+   int * id = (int*) malloc (sizeof (int));
+   *id = op-&gt;id++;
+   
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_opcode_add -&gt; %s %d\n&quot;, name, *id);
++#endif 
++
+   /* add the new element */
+   ecore_hash_set (op-&gt;string_id, (char*)name, id);
+ 
+@@ -130,7 +135,7 @@
+ 
+   int * tmp = ecore_hash_get (op-&gt;string_id, (char*)name);
+   if (!tmp) {
+-    printf(&quot;ERROR: unknown opcode %s.\n&quot;); 
++    printf(&quot;ERROR: unknown opcode %s.\n&quot;, name); 
+     return -1;
+   }
+   
+
+Modified: src/egxp/egxp_protocol_handler.c
+===================================================================
+--- src/egxp/egxp_protocol_handler.c	2005-02-15 21:57:22 UTC (rev 15)
++++ src/egxp/egxp_protocol_handler.c	2005-02-17 22:52:14 UTC (rev 16)
+@@ -84,7 +84,7 @@
+ 
+ void egxp_protocol_handler_start_element(void *userData, const char *name, const char **atts) {
+ #ifdef EGXP_DEBUG
+-  printf(&quot;TRACE: egxp_protocol_handler_start_element\n&quot;);
++  printf(&quot;TRACE: egxp_protocol_handler_start_element : %s\n&quot;, name);
+ #endif
+   assert (userData &amp;&amp; name);
+   
+@@ -92,7 +92,6 @@
+   Egxp * eg = EGXP (userData);
+   Egxp_ProtocolHandler * ph = eg-&gt;protocol_handler;
+   int i;
+-  char use_callback = 0;
+   Egxp_Node * node = NULL;
+ 
+   assert (eg &amp;&amp; ph);
+@@ -131,17 +130,26 @@
+ 
+ void egxp_protocol_handler_end_element(void *userData, const char *name) {
+ #ifdef EGXP_DEBUG
+-  printf(&quot;TRACE: egxp_protocol_handler_end_element\n&quot;);
++  printf(&quot;TRACE: egxp_protocol_handler_end_element : %s\n&quot;, name);
+ #endif
+   assert (userData &amp;&amp; name);
+-
++  
+   Egxp * eg = EGXP (userData);
+   Egxp_ProtocolHandler * ph = eg-&gt;protocol_handler;
+   
+   assert (eg &amp;&amp; ph);
+   
++  assert (ph-&gt;current_msg);
++  
++  egxp_message_print(ph-&gt;current_msg);
++  
+   /* check if the current message is equal to the current protocol stack node */
+   if (egxp_protocol_handler_equals (ph-&gt;protocol_stack, ph-&gt;current_msg, eg-&gt;opcodes)) {
++    
++#ifdef EGXP_DEBUG
++    printf(&quot;TRACE: egxp_protocol_handler_end_element -&gt; matches opcode : %s\n&quot;, name);
++#endif   
++    
+     /* if equals we can call the callback associated to the end and update the protocol_stack */
+     if (ph-&gt;protocol_stack-&gt;end_cb != NULL) ph-&gt;protocol_stack-&gt;end_cb (ph-&gt;current_msg, eg);
+     
+@@ -151,10 +159,18 @@
+     /* go to the parent message and destroy the current message */
+     Egxp_Message * old = ph-&gt;current_msg;
+     ph-&gt;current_msg = old-&gt;parent;
++    if (ph-&gt;current_msg) egxp_message_remove_child (ph-&gt;current_msg, old);
+     egxp_message_free (old);
++    
+   } else {
++
++#ifdef EGXP_DEBUG
++    printf(&quot;TRACE: egxp_protocol_handler_end_element -&gt; NOT matches opcode : %s\n&quot;, name);
++#endif   
+     ph-&gt;current_msg = ph-&gt;current_msg-&gt;parent;
+   }
++  
++  assert (ph-&gt;current_msg);
+ }
+ 
+ 
+@@ -255,7 +271,7 @@
+ 
+ 
+ int egxp_protocol_handler_receive_server_cb (void *data, int type, Ecore_Con_Event_Server_Data *ev) {
+-#ifdef EJAB_DEBUG
++#ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_protocol_handler_receive_server_cb\n&quot;);
+ #endif
+   
+@@ -265,7 +281,11 @@
+   Egxp_ProtocolHandler * ph = eg-&gt;protocol_handler;
+   XML_Parser parser =  ph-&gt;parser;
+   
+-  printf(&quot;Got server data %X [%d] (%s)\n&quot;, ev-&gt;server, ev-&gt;size, (char *)ev-&gt;data);
++  char * tmp_buf = (char*) malloc ((ev-&gt;size +1) * sizeof (char));
++  tmp_buf[ev-&gt;size] = '\0';
++  strncpy (tmp_buf, (char*)ev-&gt;data, ev-&gt;size); 
++  printf(&quot;Got server data %p [%d] (%s)\n&quot;, ev-&gt;server, ev-&gt;size, tmp_buf);
++  free (tmp_buf);
+   
+   if (XML_Parse(parser, (char*) ev-&gt;data, ev-&gt;size, 0) == XML_STATUS_ERROR) {
+     fprintf(stderr, &quot;%s at line %d\n&quot;,
+
+Modified: src/egxp/test.c
+===================================================================
+--- src/egxp/test.c	2005-02-15 21:57:22 UTC (rev 15)
++++ src/egxp/test.c	2005-02-17 22:52:14 UTC (rev 16)
+@@ -3,14 +3,22 @@
+ 
+ #include &quot;egxp.h&quot;
+ 
++#define OP_1 &quot;op1&quot;
++#define OP_2 &quot;op2&quot;
+ 
+ 
++void test_opcode (Egxp_Opcode * opcodes) {
++  egxp_opcode_add (opcodes, OP_1);
++  egxp_opcode_add (opcodes, OP_2);
++}
++
++
++
+ int main (int argc, char ** argv) {
+   /* create the protocol grammar */
+   Egxp * eg = egxp_new ();
+   Egxp_Node * n1 = NULL;
+   Egxp_Node * n2 = NULL;
+-  Egxp_Node * n3 = NULL;
+   
+   /******************************************************/
+   /******************************************************/
+@@ -18,6 +26,7 @@
+   /******************************************************/
+   /******************************************************/
+   
++  test_opcode (eg-&gt;opcodes);
+ 
+   /* define basics grammar */
+   egxp_opcode_add (eg-&gt;opcodes, &quot;stream&quot;);
+@@ -72,21 +81,27 @@
+   /* test if it's possible to get the node from the egxp protocol handler */
+   n1 = egxp_protocol_handler_get_node (eg-&gt;protocol_handler-&gt;protocol_stack,
+                                        mesg1, eg-&gt;opcodes);
+-  printf(&quot;Get stream node from protocol handler(it should not be null): %X\n&quot;, n1); 
++  printf(&quot;Get stream node from protocol handler(it should not be null): %p\n&quot;, n1); 
+   
++  
++  eg-&gt;protocol_handler-&gt;current_msg = mesg1;
++  
+   /* free the message */
+-  egxp_message_free (mesg1);
++  //  egxp_message_free (mesg1);
+   
+   
+ 
+   /* create a iq message with one attributes */
+-  mesg1 = egxp_message_new (&quot;iq&quot;);
+-  egxp_message_add_attribute (mesg1, egxp_message_attribute_new (&quot;type&quot;, &quot;get&quot;));
++  Egxp_Message * mesg2 = egxp_message_new (&quot;iq&quot;);
++  egxp_message_add_attribute (mesg2, egxp_message_attribute_new (&quot;type&quot;, &quot;get&quot;));
+   /* test if it's possible to get the node from the egxp protocol handler */
+-  printf(&quot;Get iq node from protocol handler(it should not be null): %X\n&quot;,
+-         egxp_protocol_handler_get_node (n1, mesg1, eg-&gt;opcodes));
++  printf(&quot;Get iq node from protocol handler(it should not be null): %p\n&quot;,
++         egxp_protocol_handler_get_node (n1, mesg2, eg-&gt;opcodes));
++  
++  egxp_message_add_child (mesg1, mesg2);
++
+   /* free the message */
+-  egxp_message_free (mesg1);
++  // egxp_message_free (mesg1);
+   
+   
+   /* free opcode */
+
+Modified: src/xmpp/test.c
+===================================================================
+--- src/xmpp/test.c	2005-02-15 21:57:22 UTC (rev 15)
++++ src/xmpp/test.c	2005-02-17 22:52:14 UTC (rev 16)
+@@ -9,6 +9,7 @@
+ 
+ int timer_cb (void * user_data) {
+   ecore_main_loop_quit ();
++  return 1;
+ }
+ 
+ int main (int argc, char ** argv) {
+@@ -45,9 +46,11 @@
+   /* define the jid */
+   xm-&gt;jid = xmpp_jid_new (argv[1], argv[2], &quot;eim&quot;);
+   
++  egxp_opcode_display (eg-&gt;opcodes);
++
+   /* now we can send a message to the server */
+   xmpp_message_stream (xm);
+-  
++
+   /* ecore loop */
+   ecore_main_loop_begin();
+   /* shutdown */
+
+Modified: src/xmpp/xmpp_auth.c
+===================================================================
+--- src/xmpp/xmpp_auth.c	2005-02-15 21:57:22 UTC (rev 15)
++++ src/xmpp/xmpp_auth.c	2005-02-17 22:52:14 UTC (rev 16)
+@@ -12,8 +12,10 @@
+   printf(&quot;TRACE: xmpp_auth_new\n&quot;);
+ #endif
+ 
++  /* initialize the structure */
+   Xmpp_Auth * auth = XMPP_AUTH(malloc (sizeof(Xmpp_Auth)));
+   
++  /* initialize data */
+   auth-&gt;password = NULL;
+   auth-&gt;stream_id = NULL;
+   
+@@ -27,8 +29,11 @@
+ #endif
+   assert (a);
+   
++  /* free password &amp;&amp; stream_id */
+   IF_FREE(a-&gt;password);
+   IF_FREE(a-&gt;stream_id);
++  
++  /* free structure */
+   FREE(a);
+ }
+ 
+
+Modified: src/xmpp/xmpp_jid.c
+===================================================================
+--- src/xmpp/xmpp_jid.c	2005-02-15 21:57:22 UTC (rev 15)
++++ src/xmpp/xmpp_jid.c	2005-02-17 22:52:14 UTC (rev 16)
+@@ -21,6 +21,7 @@
+ #include &lt;assert.h&gt;
+ #include &lt;stdlib.h&gt;
+ #include &lt;stdio.h&gt;
++#include &lt;string.h&gt;
+ 
+ #include &lt;Ecore_Data.h&gt;
+ 
+
+Modified: src/xmpp/xmpp_message.c
+===================================================================
+--- src/xmpp/xmpp_message.c	2005-02-15 21:57:22 UTC (rev 15)
++++ src/xmpp/xmpp_message.c	2005-02-17 22:52:14 UTC (rev 16)
+@@ -56,6 +56,8 @@
+   /* get reference to the connection */
+   Egxp_Connection * conn = EGXP_EXTENSION(x)-&gt;parent-&gt;connection;
+   egxp_connection_send_message (conn, message, 0);
++
++  return 1;
+ }
+ 
+ Egxp_Message * xmpp_message_iq (char * type, char * id, char * to) {
+@@ -81,7 +83,14 @@
+ 
+ 
+ Egxp_Message * xmpp_message_query (char * xmlns) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_message_query\n&quot;);
++#endif 
++  assert (xmlns);
++  
++  /* build the query message */
+   Egxp_Message * message = egxp_message_new (XMPP_TAG_QUERY);
++  /* set the xmlns attribute */
+   egxp_message_add_attribute (message, 
+ 			      egxp_message_attribute_new (XMPP_ATT_XMLNS, 
+ 							  xmlns));
+
+Modified: src/xmpp/xmpp_opcode.c
+===================================================================
+--- src/xmpp/xmpp_opcode.c	2005-02-15 21:57:22 UTC (rev 15)
++++ src/xmpp/xmpp_opcode.c	2005-02-17 22:52:14 UTC (rev 16)
+@@ -36,6 +36,8 @@
+   /* *************** */
+   /*     stream      */
+   egxp_opcode_add (eg-&gt;opcodes, XMPP_TAG_STREAM);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_TAG_IQ);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_TAG_QUERY);
+   
+   egxp_opcode_add (eg-&gt;opcodes, XMPP_ATT_XMLNS);
+   egxp_opcode_add (eg-&gt;opcodes, XMPP_ATT_XMLNS_STREAM);
+@@ -45,7 +47,29 @@
+   egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_STREAM_VERSION);
+   
+   
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_ATT_TYPE);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_ATT_TO);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_ATT_XMLNS);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_ATT_VERSION);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_ATT_ID);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_ATT_JID);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_ATT_FROM);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_ATT_NAME);
++
+   
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_IQ_GET);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_IQ_SET);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_IQ_RESULT);
++  
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_QUERY_AUTH);
++  
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_IQ_AUTH_1);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_IQ_AUTH_2);
++
++  // egxp_opcode_add (eg-&gt;opcodes, );
++  
++  
++
+   /********************/
+   /********************/
+   /*  Protocol Init   */
+@@ -62,5 +86,18 @@
+ 						       egxp_opcode_get_id (eg-&gt;opcodes, XMPP_VALUE_STREAM_XMLNS_STREAM)));
+   
+   egxp_node_set_cb (stream, xmpp_callback_stream_begin_cb, NULL);
++
++
++  /* maybe put this inside the xmpp_auth */
++  /* define iq type='result' id='auth_1' */
++  Egxp_Node * iq = egxp_node_new (egxp_opcode_get_id (eg-&gt;opcodes, XMPP_TAG_IQ));
++  egxp_node_add_child (stream, iq);
++  /* type = result */
++  egxp_node_add_condition (iq, egxp_condition_new (egxp_opcode_get_id (eg-&gt;opcodes, XMPP_ATT_TYPE),
++						   egxp_opcode_get_id (eg-&gt;opcodes, XMPP_VALUE_IQ_RESULT)));
++  egxp_node_add_condition (iq, egxp_condition_new (egxp_opcode_get_id (eg-&gt;opcodes, XMPP_ATT_ID),
++						   egxp_opcode_get_id (eg-&gt;opcodes, XMPP_VALUE_IQ_AUTH_1)));
++  /* attach callback */
+   
++
+ }
+
+Modified: src/xmpp/xmpp_opcode.h
+===================================================================
+--- src/xmpp/xmpp_opcode.h	2005-02-15 21:57:22 UTC (rev 15)
++++ src/xmpp/xmpp_opcode.h	2005-02-17 22:52:14 UTC (rev 16)
+@@ -52,9 +52,14 @@
+ 
+ #define XMPP_VALUE_IQ_GET       &quot;get&quot;
+ #define XMPP_VALUE_IQ_SET       &quot;set&quot;
++#define XMPP_VALUE_IQ_RESULT    &quot;result&quot;
+ 
+ #define XMPP_VALUE_QUERY_AUTH   &quot;jabber:iq:auth&quot;
+ 
++#define XMPP_VALUE_IQ_AUTH_1    &quot;auth_1&quot;
++#define XMPP_VALUE_IQ_AUTH_2    &quot;auth_2&quot;
++
++
+ /**
+  * Add the xmpp opcode inside the opcode variable
+  * @param opcode: use to store xmpp opcode
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000011.html">[Eim-svn] r15 - in src: egxp xmpp
+</A></li>
+	<LI>Next message: <A HREF="000013.html">[Eim-svn] r17 - / src/egxp src/xmpp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#12">[ date ]</a>
+              <a href="thread.html#12">[ thread ]</a>
+              <a href="subject.html#12">[ subject ]</a>
+              <a href="author.html#12">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

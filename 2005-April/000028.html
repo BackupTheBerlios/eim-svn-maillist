@@ -1,0 +1,455 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r32 - / data/themes/default data/themes/default/img data/themes/default/macros data/themes/default/parts data/themes/default/programs
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-April/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r32%20-%20/%20data/themes/default%20data/themes/default/img%20data/themes/default/macros%20data/themes/default/parts%20data/themes/default/programs&In-Reply-To=%3C200504142210.j3EMAq9f032055%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000027.html">
+   <LINK REL="Next"  HREF="000029.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r32 - / data/themes/default data/themes/default/img data/themes/default/macros data/themes/default/parts data/themes/default/programs</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r32%20-%20/%20data/themes/default%20data/themes/default/img%20data/themes/default/macros%20data/themes/default/parts%20data/themes/default/programs&In-Reply-To=%3C200504142210.j3EMAq9f032055%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r32 - / data/themes/default data/themes/default/img data/themes/default/macros data/themes/default/parts data/themes/default/programs">jol at sheep.berlios.de
+       </A><BR>
+    <I>Fri Apr 15 00:10:52 CEST 2005</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000027.html">[Eim-svn] r31 - / data data/themes data/themes/default data/themes/default/img data/themes/default/macros data/themes/default/parts data/themes/default/programs
+</A></li>
+        <LI>Next message: <A HREF="000029.html">[Eim-svn] r33 - / src src/egxp src/gui src/xmpp src/xmpp-im
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#28">[ date ]</a>
+              <a href="thread.html#28">[ thread ]</a>
+              <a href="subject.html#28">[ subject ]</a>
+              <a href="author.html#28">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-04-15 00:10:51 +0200 (Fri, 15 Apr 2005)
+New Revision: 32
+
+Added:
+   data/themes/default/img/ask.png
+   data/themes/default/img/away.png
+   data/themes/default/img/dnd.png
+   data/themes/default/img/ffc.png
+   data/themes/default/img/invisible.png
+   data/themes/default/img/offline.png
+   data/themes/default/img/online.png
+   data/themes/default/img/xa.png
+Modified:
+   ChangeLog
+   data/themes/default/default.edc
+   data/themes/default/default.edj
+   data/themes/default/macros/button.inc
+   data/themes/default/parts/main.edc
+   data/themes/default/programs/main.edc
+Log:
+- Add some test around edje. It a little buggy, but it is a beginning
+- Add a BUTTON_VLINE macro
+	
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-04-14 19:57:57 UTC (rev 31)
++++ ChangeLog	2005-04-14 22:10:51 UTC (rev 32)
+@@ -6,6 +6,9 @@
+ 	  data/themes/default and run the &quot;make preview&quot; command to see
+ 	  the gui. If you want to work on it your are welcome. So the 
+ 	  project is not dead, i work on it even if i'm busy.
++	- Add some test around edje. It a little buggy, but it is a beginning
++	- Add a BUTTON_VLINE macro
++	
+ 2005-03-31(jol):
+ 	- Fix a dirty bug inside the get_data of the egxp_message
+ 	- Fix a bug in the roster, in fact, all contacts were referenced by their
+
+Modified: data/themes/default/default.edc
+===================================================================
+--- data/themes/default/default.edc	2005-04-14 19:57:57 UTC (rev 31)
++++ data/themes/default/default.edc	2005-04-14 22:10:51 UTC (rev 32)
+@@ -2,8 +2,18 @@
+ 
+ 
+ images {
+-  image, &quot;arrow_b.png&quot; RAW;
+-  image, &quot;arrow_t.png&quot; RAW;
++  image : &quot;arrow_b.png&quot; RAW;
++  image : &quot;arrow_t.png&quot; RAW;
++  
++  image : &quot;online.png&quot;  RAW;
++  image : &quot;ffc.png&quot;  RAW;
++  image : &quot;away.png&quot; RAW;
++  image : &quot;xa.png&quot; RAW;
++  image : &quot;dnd.png&quot; RAW;
++  image : &quot;invisible.png&quot; RAW;
++  image : &quot;offline.png&quot; RAW;
++  
++  
+ }
+ 
+ 
+
+Modified: data/themes/default/default.edj
+===================================================================
+(Binary files differ)
+
+Added: data/themes/default/img/ask.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/ask.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/img/away.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/away.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/img/dnd.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/dnd.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/img/ffc.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/ffc.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/img/invisible.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/invisible.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/img/offline.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/offline.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/img/online.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/online.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: data/themes/default/img/xa.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/xa.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Modified: data/themes/default/macros/button.inc
+===================================================================
+--- data/themes/default/macros/button.inc	2005-04-14 19:57:57 UTC (rev 31)
++++ data/themes/default/macros/button.inc	2005-04-14 22:10:51 UTC (rev 32)
+@@ -62,6 +62,72 @@
+ 
+ 
+ 
++#define BUTTON_VLINE(NAME, IMG, IMG2, W, H, PREVIOUS, CLIP) \
++      part {				\
++        name, NAME;			\
++	clip_to, CLIP;                  \
++	description {			\
++	  state, &quot;default&quot; 0.0;		\
++	  min, W H;			\
++	  max, W H;			\
++	  color, 255 255 255 80;	\
++	  rel1 {			\
++	    to, PREVIOUS;		\
++	    relative, 1.0 0.0;		\
++	    offset, 1 0;		\
++	  }				\
++	  rel2 {			\
++	    to, PREVIOUS;		\
++	    relative, 1.0 1.0;		\
++	    offset, W 0;		\
++	  }				\
++	  image {			\
++	    normal, IMG;		\
++	  }				\
++	}				\
++	description {			\
++	  state, &quot;over&quot; 0.0;		\
++	  min, W H;			\
++	  max, W H; 			\
++	  color, 255 255 255 255;	\
++	  rel1 {			\
++	   to, PREVIOUS;		\
++           relative, 1.0 0.0;		\
++	   offset, 1 0;			\
++	  }				\
++	  rel2 {			\
++	    to, PREVIOUS;		\
++	    relative, 1.0 1.0;		\
++	    offset, W 0;		\
++	  }				\
++	  image {			\
++	    normal, IMG;		\
++	  }				\
++	}				\
++	description {			\
++	  state, &quot;down&quot; 0.0;		\
++	  min, W H;			\
++	  max, W H; 			\
++	  color, 255 255 255 255;	\
++	  rel1 {			\
++	    to, PREVIOUS;		\
++	    relative, 1.0 0.0;		\
++	    offset, 1 0;                \
++	  }				\
++	  rel2 {			\
++	    to, PREVIOUS;		\
++	    relative, 1.0 1.0;		\
++	    offset, W H;		\
++	  }				\
++	  image {			\
++	    normal, IMG2;		\
++	  }				\
++	}				\
++      }					
++
++
++
++
+ #define BUTTON_CLIPPED(NAME, IMG, IMG2, W, H, REL1_TO, REL1_REL, REL1_OFF, REL2_TO, REL2_REL, REL2_OFF, CLIP) \
+       part {				\
+         name, NAME;			\
+@@ -182,3 +248,6 @@
+   BUTTON_PROG_ANIM(NAME) \
+   BUTTON_PROG_SIG(NAME, SIG_DOWN, SIG_UP)
+ 
++
++
++
+
+Modified: data/themes/default/parts/main.edc
+===================================================================
+--- data/themes/default/parts/main.edc	2005-04-14 19:57:57 UTC (rev 31)
++++ data/themes/default/parts/main.edc	2005-04-14 22:10:51 UTC (rev 32)
+@@ -21,7 +21,7 @@
+ 
+     rel2 {
+       relative, 1.0 0.0;
+-      offset, -1 30;
++      offset, -1 32;
+     }
+   }
+ }
+@@ -113,6 +113,74 @@
+ }
+ 
+ 
++
++/************************************************/
++/************************************************/
++/*  DEFINE THE TOGGLE BUTTON BAR                */
++/************************************************/
++/************************************************/
++#define BASE_ICON_TB_SIZE 14
++
++// Define the Toolbar Clip
++part {
++  name : &quot;base.toggle.clip&quot;;
++  type : RECT;
++  mouse_events : 0;
++  description {
++    state : &quot;default&quot; 0.0;
++    visible : 0;
++  }
++  description {
++    state : &quot;close&quot; 0.0;
++    visible : 1;
++  }
++}
++
++
++BUTTON_CLIPPED(&quot;base.toggle.online&quot;,
++	       &quot;online.png&quot;, &quot;online.png&quot;,
++	       BASE_ICON_TB_SIZE, BASE_ICON_TB_SIZE,
++	       &quot;base.bg&quot;, 0.0 0.0, 0 10,
++	       &quot;base.bg&quot;, 0.0 0.0, BASE_ICON_TB_SIZE (BASE_ICON_TB_SIZE+10),
++	       &quot;base.toggle.clip&quot;);
++
++BUTTON_VLINE(&quot;base.toggle.ffc&quot;,
++	     &quot;ffc.png&quot;, &quot;ffc.png&quot;,
++	     14, 14,
++	     &quot;base.toggle.online&quot;,
++	     &quot;base.toggle.clip&quot;);
++
++BUTTON_VLINE(&quot;base.toggle.away&quot;,
++	     &quot;away.png&quot;, &quot;away.png&quot;,
++	     14, 14,
++	     &quot;base.toggle.ffc&quot;,
++	     &quot;base.toggle.clip&quot;);
++
++BUTTON_VLINE(&quot;base.toggle.xa&quot;,
++	     &quot;xa.png&quot;, &quot;xa.png&quot;,
++	     14, 14,
++	     &quot;base.toggle.away&quot;,
++	     &quot;base.toggle.clip&quot;);
++
++BUTTON_VLINE(&quot;base.toggle.dnd&quot;,
++	     &quot;dnd.png&quot;, &quot;dnd.png&quot;,
++	     14, 14,
++	     &quot;base.toggle.xa&quot;,
++	     &quot;base.toggle.clip&quot;);
++
++BUTTON_VLINE(&quot;base.toggle.invisible&quot;,
++	     &quot;invisible.png&quot;, &quot;invisible.png&quot;,
++	     14, 14,
++	     &quot;base.toggle.dnd&quot;,
++	     &quot;base.toggle.clip&quot;);
++
++BUTTON_VLINE(&quot;base.toggle.offline&quot;,
++	     &quot;offline.png&quot;, &quot;invisible.png&quot;,
++	     14, 14,
++	     &quot;base.toggle.invisible&quot;,
++	     &quot;base.toggle.clip&quot;);
++
++
+ // Define button
+ BUTTON_CLIPPED(&quot;base.minus&quot;, 
+ 	       &quot;arrow_t.png&quot;, &quot;arrow_t.png&quot;,
+
+Modified: data/themes/default/programs/main.edc
+===================================================================
+--- data/themes/default/programs/main.edc	2005-04-14 19:57:57 UTC (rev 31)
++++ data/themes/default/programs/main.edc	2005-04-14 22:10:51 UTC (rev 32)
+@@ -4,8 +4,6 @@
+   source : &quot;*&quot;;
+   action : STATE_SET &quot;close&quot; 0.0;
+   transition : ACCELERATE 1.0;
+-  //target : &quot;base.plus.clip&quot;;
+-  //target : &quot;base.minus.clip&quot;;
+   target : &quot;base.bg&quot;;
+ }
+ 
+@@ -15,8 +13,6 @@
+   source : &quot;*&quot;;
+   action : STATE_SET &quot;default&quot; 0.0;
+   transition : ACCELERATE 1.0;
+-  //target : &quot;base.plus.clip&quot;;
+-  // target : &quot;base.minus.clip&quot;;
+   target : &quot;base.bg&quot;;
+ }
+ 
+@@ -27,19 +23,41 @@
+   action : STATE_SET &quot;default&quot; 0.0;
+   target : &quot;base.plus.clip&quot;;
+   target : &quot;base.minus.clip&quot;;
+-  //target : &quot;base.bg&quot;;
++  target : &quot;base.toggle.clip&quot;;
+ }
+ 
+ program {
+   name :   &quot;base.plusminus.close&quot;;
+   signal : &quot;base,close&quot;;
+   source : &quot;*&quot;;
+-  action : STATE_SET &quot;close&quot; 0.0;
++  action : STATE_SET &quot;close&quot; 0.5;
+   target : &quot;base.plus.clip&quot;;
+   target : &quot;base.minus.clip&quot;;
++  target : &quot;base.toggle.clip&quot;;
++  //  after : &quot;try&quot;;
+ }
+ 
+-
+-// base.minus --&gt; base, close
++/*
++program {
++  name : &quot;try&quot;;
++  action : STATE_SET &quot;close&quot; 0.5;
++  target : &quot;base.toggle.clip&quot;;
++}
++*/
+ BUTTON_PROG(&quot;base.minus&quot;, &quot;&quot;, &quot;base,close&quot;);
+ BUTTON_PROG(&quot;base.plus&quot;, &quot;&quot;, &quot;base,open&quot;);
++
++
++
++/************************************************/
++/************************************************/
++/*  DEFINE THE TOGGLE BUTTON BAR                */
++/************************************************/
++/************************************************/
++BUTTON_PROG(&quot;base.toggle.online&quot;, &quot;&quot;, &quot;&quot;);
++BUTTON_PROG(&quot;base.toggle.away&quot;, &quot;&quot;, &quot;&quot;);
++BUTTON_PROG(&quot;base.toggle.ffc&quot;, &quot;&quot;, &quot;&quot;);
++BUTTON_PROG(&quot;base.toggle.xa&quot;, &quot;&quot;, &quot;&quot;);
++BUTTON_PROG(&quot;base.toggle.dnd&quot;, &quot;&quot;, &quot;&quot;);
++BUTTON_PROG(&quot;base.toggle.invisible&quot;, &quot;&quot;, &quot;&quot;);
++BUTTON_PROG(&quot;base.toggle.offline&quot;, &quot;&quot;, &quot;&quot;);
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000027.html">[Eim-svn] r31 - / data data/themes data/themes/default data/themes/default/img data/themes/default/macros data/themes/default/parts data/themes/default/programs
+</A></li>
+	<LI>Next message: <A HREF="000029.html">[Eim-svn] r33 - / src src/egxp src/gui src/xmpp src/xmpp-im
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#28">[ date ]</a>
+              <a href="thread.html#28">[ thread ]</a>
+              <a href="subject.html#28">[ subject ]</a>
+              <a href="author.html#28">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

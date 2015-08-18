@@ -1,0 +1,213 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r17 - / src/egxp src/xmpp
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-February/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r17%20-%20/%20src/egxp%20src/xmpp&In-Reply-To=%3C200502181038.j1IAcp2o031832%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000012.html">
+   <LINK REL="Next"  HREF="000014.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r17 - / src/egxp src/xmpp</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r17%20-%20/%20src/egxp%20src/xmpp&In-Reply-To=%3C200502181038.j1IAcp2o031832%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r17 - / src/egxp src/xmpp">jol at sheep.berlios.de
+       </A><BR>
+    <I>Fri Feb 18 11:38:51 CET 2005</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000012.html">[Eim-svn] r16 - / src/egxp src/xmpp
+</A></li>
+        <LI>Next message: <A HREF="000014.html">[Eim-svn] r18 - / src/egxp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#13">[ date ]</a>
+              <a href="thread.html#13">[ thread ]</a>
+              <a href="subject.html#13">[ subject ]</a>
+              <a href="author.html#13">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-02-18 11:38:50 +0100 (Fri, 18 Feb 2005)
+New Revision: 17
+
+Modified:
+   ChangeLog
+   src/egxp/egxp_opcode.c
+   src/egxp/egxp_protocol_handler.c
+   src/xmpp/test.c
+   src/xmpp/xmpp_opcode.c
+   src/xmpp/xmpp_opcode.h
+Log:
+It should have no more memory leaks from eim
+- Fix memory leaks
+- rename egxp_opcode_display to egxp_opcode_free
+- fix the egxp_opcode_add, when you try to add an existing element it is not added
+  and it return the good id.
+- in the xmpp/test place the egxp_free before the ecore_shutdown.
+
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-02-17 22:52:14 UTC (rev 16)
++++ ChangeLog	2005-02-18 10:38:50 UTC (rev 17)
+@@ -1,3 +1,10 @@
++2005-02-19(jol):
++	- Fix memory leaks
++	- rename egxp_opcode_display to egxp_opcode_free
++	- fix the egxp_opcode_add, when you try to add an existing element it is not added
++	  and it return the good id.
++	- in the xmpp/test place the egxp_free before the ecore_shutdown.
++	
+ 2005-02-18(jol):
+ 	- Try to fix some memory leaks
+ 	
+
+Modified: src/egxp/egxp_opcode.c
+===================================================================
+--- src/egxp/egxp_opcode.c	2005-02-17 22:52:14 UTC (rev 16)
++++ src/egxp/egxp_opcode.c	2005-02-18 10:38:50 UTC (rev 17)
+@@ -65,11 +65,20 @@
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_opcode_add\n&quot;);
+ #endif
+-
++  
+   assert (op &amp;&amp; name);
+   
++  int * id = NULL;
++  /* check if the name already exist */
++  if ( (id = ecore_hash_get (op-&gt;string_id, (char*) name)) != NULL) {
++#ifdef EGXP_DEBUG
++    printf(&quot;TRACE: egxp_opcode_add -&gt; %s already exists\n&quot;, name);
++#endif 
++    return *id;
++  }
++
+   /* allocate the memory for the id */
+-  int * id = (int*) malloc (sizeof (int));
++  id = (int*) malloc (sizeof (int));
+   *id = op-&gt;id++;
+   
+ #ifdef EGXP_DEBUG
+
+Modified: src/egxp/egxp_protocol_handler.c
+===================================================================
+--- src/egxp/egxp_protocol_handler.c	2005-02-17 22:52:14 UTC (rev 16)
++++ src/egxp/egxp_protocol_handler.c	2005-02-18 10:38:50 UTC (rev 17)
+@@ -169,8 +169,6 @@
+ #endif   
+     ph-&gt;current_msg = ph-&gt;current_msg-&gt;parent;
+   }
+-  
+-  assert (ph-&gt;current_msg);
+ }
+ 
+ 
+
+Modified: src/xmpp/test.c
+===================================================================
+--- src/xmpp/test.c	2005-02-17 22:52:14 UTC (rev 16)
++++ src/xmpp/test.c	2005-02-18 10:38:50 UTC (rev 17)
+@@ -23,7 +23,8 @@
+   }
+ 
+   /* initialize ecore connection */
+-  ecore_con_init();
++  ecore_init();
++  ecore_con_init ();
+ 
+   /* create Egxp  */
+   Egxp * eg = egxp_new ();
+@@ -32,7 +33,7 @@
+   Xmpp * xm = xmpp_register (eg);
+   
+   /* after 3 second we quit the ecore loop */
+-  ecore_timer_add (5, timer_cb, NULL);
++  Ecore_Timer * timer = ecore_timer_add (5, timer_cb, NULL);
+   printf(&quot;Quit automaticly (after 5 seconds)\n&quot;);
+   
+   /* define the connection */
+@@ -46,18 +47,18 @@
+   /* define the jid */
+   xm-&gt;jid = xmpp_jid_new (argv[1], argv[2], &quot;eim&quot;);
+   
+-  egxp_opcode_display (eg-&gt;opcodes);
+-
+   /* now we can send a message to the server */
+   xmpp_message_stream (xm);
+ 
+   /* ecore loop */
+   ecore_main_loop_begin();
+-  /* shutdown */
+-  ecore_con_shutdown();
+   
+   /* free Egxp */
+   egxp_free (eg);
+   
++  /* shutdown */
++  ecore_con_shutdown ();
++  ecore_shutdown();
++  
+   return 0;
+ }
+
+Modified: src/xmpp/xmpp_opcode.c
+===================================================================
+--- src/xmpp/xmpp_opcode.c	2005-02-17 22:52:14 UTC (rev 16)
++++ src/xmpp/xmpp_opcode.c	2005-02-18 10:38:50 UTC (rev 17)
+@@ -42,7 +42,6 @@
+   egxp_opcode_add (eg-&gt;opcodes, XMPP_ATT_XMLNS);
+   egxp_opcode_add (eg-&gt;opcodes, XMPP_ATT_XMLNS_STREAM);
+   
+-  egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_STREAM_XMLNS);
+   egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_STREAM_XMLNS_STREAM);
+   egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_STREAM_VERSION);
+   
+
+Modified: src/xmpp/xmpp_opcode.h
+===================================================================
+--- src/xmpp/xmpp_opcode.h	2005-02-17 22:52:14 UTC (rev 16)
++++ src/xmpp/xmpp_opcode.h	2005-02-18 10:38:50 UTC (rev 17)
+@@ -32,7 +32,6 @@
+ 
+ #define XMPP_TAG_USERNAME       &quot;username&quot;
+ 
+-#define XMPP_ATT_XMLNS          &quot;xmlns&quot;
+ #define XMPP_ATT_XMLNS_STREAM   &quot;xmlns:stream&quot;
+ 
+ #define XMPP_VALUE_STREAM_XMLNS          &quot;jabber:client&quot;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000012.html">[Eim-svn] r16 - / src/egxp src/xmpp
+</A></li>
+	<LI>Next message: <A HREF="000014.html">[Eim-svn] r18 - / src/egxp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#13">[ date ]</a>
+              <a href="thread.html#13">[ thread ]</a>
+              <a href="subject.html#13">[ subject ]</a>
+              <a href="author.html#13">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,566 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r11 - / src src/egxp src/xmpp
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-February/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r11%20-%20/%20src%20src/egxp%20src/xmpp&In-Reply-To=%3C200502130113.j1D1DoIB017059%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000006.html">
+   <LINK REL="Next"  HREF="000008.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r11 - / src src/egxp src/xmpp</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r11%20-%20/%20src%20src/egxp%20src/xmpp&In-Reply-To=%3C200502130113.j1D1DoIB017059%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r11 - / src src/egxp src/xmpp">jol at sheep.berlios.de
+       </A><BR>
+    <I>Sun Feb 13 02:13:50 CET 2005</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000006.html">[Eim-svn] r10 - / src/egxp
+</A></li>
+        <LI>Next message: <A HREF="000008.html">[Eim-svn] r12 - / src/egxp src/xmpp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7">[ date ]</a>
+              <a href="thread.html#7">[ thread ]</a>
+              <a href="subject.html#7">[ subject ]</a>
+              <a href="author.html#7">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-02-13 02:13:42 +0100 (Sun, 13 Feb 2005)
+New Revision: 11
+
+Added:
+   src/xmpp/
+   src/xmpp/Makefile.am
+   src/xmpp/test.c
+   src/xmpp/xmpp.c
+   src/xmpp/xmpp.h
+   src/xmpp/xmpp_callback.c
+   src/xmpp/xmpp_callback.h
+   src/xmpp/xmpp_opcode.c
+   src/xmpp/xmpp_opcode.h
+   src/xmpp/xmpp_struct.h
+Modified:
+   ChangeLog
+   configure.ac
+   src/Makefile.am
+   src/egxp/Makefile.am
+   src/egxp/egxp.c
+   src/egxp/egxp.h
+Log:
+- begin the xmpp part.
+- add the extension concept inside the Egxp structure
+
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-02-12 19:14:29 UTC (rev 10)
++++ ChangeLog	2005-02-13 01:13:42 UTC (rev 11)
+@@ -1,3 +1,6 @@
++2005-02-13(jol):
++	- begin the xmpp part.
++	- add the extension concept inside the Egxp structure
+ 2005-02-12(jol):
+ 	- factorize some code inside egxp_protocol_handler.
+ 	- finished the protocol handler xml part.
+
+Modified: configure.ac
+===================================================================
+--- configure.ac	2005-02-12 19:14:29 UTC (rev 10)
++++ configure.ac	2005-02-13 01:13:42 UTC (rev 11)
+@@ -75,5 +75,6 @@
+ Makefile
+ src/Makefile
+ src/egxp/Makefile
++src/xmpp/Makefile
+ doc/Makefile
+ ])
+
+Modified: src/Makefile.am
+===================================================================
+--- src/Makefile.am	2005-02-12 19:14:29 UTC (rev 10)
++++ src/Makefile.am	2005-02-13 01:13:42 UTC (rev 11)
+@@ -1 +1,2 @@
+-SUBDIRS=egxp
++SUBDIRS=egxp xmpp
++
+
+Modified: src/egxp/Makefile.am
+===================================================================
+--- src/egxp/Makefile.am	2005-02-12 19:14:29 UTC (rev 10)
++++ src/egxp/Makefile.am	2005-02-13 01:13:42 UTC (rev 11)
+@@ -5,7 +5,7 @@
+ test_LDADD = libegxp.la
+ test_CFLAGS = $(ecore_cflags) $(IDN_CFLAGS)
+ 
+-lib_LTLIBRARIES = libegxp.la
++noinst_LTLIBRARIES = libegxp.la
+ 
+ pkgincludeinputdir = $(pkgincludedir)/egxp
+ 
+
+Modified: src/egxp/egxp.c
+===================================================================
+--- src/egxp/egxp.c	2005-02-12 19:14:29 UTC (rev 10)
++++ src/egxp/egxp.c	2005-02-13 01:13:42 UTC (rev 11)
+@@ -34,14 +34,16 @@
+   /* the root of the protocol */
+   tmp-&gt;root = egxp_node_new (egxp_opcode_get_id (tmp-&gt;opcodes, 
+ 						      &quot;__ROOT__&quot;));
+-  
+-  
++    
+   /* initialize the user data */
+   tmp-&gt;user_data = NULL;
+   
+   /* define the protocol handler */
+   tmp-&gt;protocol_handler = egxp_protocol_handler_new (tmp);
+-  
++
++  /* initialzie extension */
++  tmp-&gt;extensions = NULL;
++
+   return tmp;
+ }
+ 
+@@ -57,6 +59,44 @@
+   if (e-&gt;root) egxp_node_free(e-&gt;root);
+   /* free protocol handler */
+   if (e-&gt;protocol_handler) egxp_protocol_handler_free (e-&gt;protocol_handler);
++  /* free extension */
++  if (e-&gt;extensions) ecore_hash_destroy (e-&gt;extensions);
+   
+   free (e);
+ }
++
++
++void egxp_extension_free (void * e) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_extension_free\n&quot;);
++#endif
++  assert (e);
++  
++  Egxp_Extension * ext = EGXP_EXTENSION(e);
++  ext-&gt;destroy (e);
++}
++
++void egxp_extension_register (Egxp * e, int id, void * ext) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_extension_register\n&quot;);
++#endif
++  assert (e &amp;&amp; ext);
++
++  if (e-&gt;extensions == NULL) {
++    e-&gt;extensions = ecore_hash_new (ecore_direct_hash, ecore_direct_compare);
++    ecore_hash_set_free_value (e-&gt;extensions, egxp_extension_free);
++  }
++  
++  ecore_hash_set (e-&gt;extensions, (int*)id, ext);
++}
++
++
++void * egxp_extension_get (Egxp *e, int id) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_extension_get\n&quot;);
++#endif
++  assert (e &amp;&amp; id);
++  assert (e-&gt;extensions);
++
++  return ecore_hash_get (e-&gt;extensions, (int*)id);
++}
+
+Modified: src/egxp/egxp.h
+===================================================================
+--- src/egxp/egxp.h	2005-02-12 19:14:29 UTC (rev 10)
++++ src/egxp/egxp.h	2005-02-13 01:13:42 UTC (rev 11)
+@@ -22,6 +22,8 @@
+ #ifndef egxp_header_h_
+ #define egxp_header_h_
+ 
++#include &lt;Ecore_Data.h&gt;
++
+ #include &quot;egxp_node_struct.h&quot;
+ #include &quot;egxp_node.h&quot;
+ #include &quot;egxp_opcode.h&quot;
+@@ -42,11 +44,21 @@
+   /* the protocol handler */
+   Egxp_ProtocolHandler * protocol_handler;
+ 
++  /* contains data */
++  Ecore_Hash * extensions;
++
+   /* specific user data */
+   void * user_data;
+ };
+ 
+ 
++typedef struct _Egxp_Extension Egxp_Extension;
++#define EGXP_EXTENSION(o) ((Egxp_Extension*)o)
++struct _Egxp_Extension {
++  Ecore_Free_Cb destroy;
++};
++
++
+ /**
+  * Allocate the Egxp structure
+  * - allocate the opcodes structures 
+@@ -60,4 +72,17 @@
+  */
+ void egxp_free (Egxp * e);
+ 
++
++/**
++ * Register an extension. It allows to store data, so when you define 
++ * other extension you can store you're structure inside
++ */
++void egxp_extension_register (Egxp * e, int id, void * ext);
++
++
++/**
++ * @return the extension
++ */
++void * egxp_extension_get (Egxp *e, int id);
++
+ #endif
+
+Added: src/xmpp/Makefile.am
+===================================================================
+--- src/xmpp/Makefile.am	2005-02-12 19:14:29 UTC (rev 10)
++++ src/xmpp/Makefile.am	2005-02-13 01:13:42 UTC (rev 11)
+@@ -0,0 +1,25 @@
++noinst_PROGRAMS = test
++
++test_SOURCES = \
++	test.c
++test_LDADD = \
++	-L$(top_srcdir)/src/egxp -legxp \
++	-lxmpp
++test_CFLAGS = $(ecore_cflags) $(IDN_CFLAGS) -I$(top_srcdir)/src
++
++
++noinst_LTLIBRARIES = libxmpp.la
++
++pkgincludeinputdir = $(pkgincludedir)/xmpp
++pkgincludeinput_HEADERS= \
++	xmpp_opcode.h    \
++	xmpp_callback.h  \
++	xmpp_struct.h    \
++	xmpp.h
++
++libxmpp_la_SOURCES = \
++	xmpp_opcode.c    \
++	xmpp_callback.c  \
++	xmpp.c
++
++libxmpp_la_CFLAGS = $(ecore_cflags) $(IDN_CFLAGS) $(EXPAT_INCLUDE) -I$(top_srcdir)/src
+
+Added: src/xmpp/test.c
+===================================================================
+--- src/xmpp/test.c	2005-02-12 19:14:29 UTC (rev 10)
++++ src/xmpp/test.c	2005-02-13 01:13:42 UTC (rev 11)
+@@ -0,0 +1,21 @@
++#include &lt;stdio.h&gt;
++
++#include &quot;egxp/egxp.h&quot;
++#include &quot;xmpp.h&quot;
++
++int main (int argc, char ** argv) {
++  
++  /* create the protocol grammar */
++  Egxp * eg = egxp_new ();
++  
++  /* init opcode */
++  xmpp_register (eg);
++
++  /* display opcode */
++  egxp_opcode_display (eg-&gt;opcodes);
++  
++  /* free opcode */
++  egxp_free (eg);
++  
++  return 0;
++}
+
+Added: src/xmpp/xmpp.c
+===================================================================
+--- src/xmpp/xmpp.c	2005-02-12 19:14:29 UTC (rev 10)
++++ src/xmpp/xmpp.c	2005-02-13 01:13:42 UTC (rev 11)
+@@ -0,0 +1,50 @@
++#include &lt;stdio.h&gt;
++#include &lt;assert.h&gt;
++#include &quot;xmpp.h&quot;
++
++
++void xmpp_register (Egxp * eg) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_register\n&quot;);
++#endif
++
++  assert (eg);
++  
++  /* register opcode */
++  xmpp_opcode_init (eg);
++  /* initialize the Egxp Structure */
++  int id = egxp_opcode_add (eg-&gt;opcodes, XMPP_REGISTER);
++  Xmpp * tmp = xmpp_new (eg);
++  /* register the structure */
++  egxp_extension_register (eg, id, tmp);
++}
++
++
++
++Xmpp * xmpp_new (Egxp * eg) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_new\n&quot;);
++#endif
++
++  assert (eg);
++  
++  /* allocate the structure */
++  Xmpp * tmp = XMPP (malloc(sizeof (Xmpp)));
++  
++  /* define the destroy function */
++  tmp-&gt;extension.destroy = ECORE_FREE_CB(xmpp_free);
++  
++  /* return the xmpp */
++  return tmp;
++}
++
++
++void xmpp_free (Xmpp * x) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_free\n&quot;);
++#endif
++  
++  assert (x);
++  
++  FREE (x);
++}
+
+Added: src/xmpp/xmpp.h
+===================================================================
+--- src/xmpp/xmpp.h	2005-02-12 19:14:29 UTC (rev 10)
++++ src/xmpp/xmpp.h	2005-02-13 01:13:42 UTC (rev 11)
+@@ -0,0 +1,33 @@
++#ifndef xmpp_header_h_
++#define xmpp_header_h_
++
++#include &quot;egxp/egxp.h&quot;
++
++#include &quot;xmpp_struct.h&quot;
++#include &quot;xmpp_opcode.h&quot;
++#include &quot;xmpp_callback.h&quot;
++
++
++#define XMPP_REGISTER &quot;__XMPP_REGISTER__&quot;
++
++/**
++ * Register the xmpp protocol
++ *  - initialize the xmpp structure
++ *  - register opcode and protocol node
++ * @param eg: The Egpx structure
++ */
++void xmpp_register (Egxp * eg);
++
++
++/**
++ * Initialize the xmpp structure.
++ */
++Xmpp * xmpp_new (Egxp * eg);
++
++
++/**
++ * Free memory
++ */
++void xmpp_free (Xmpp * x);
++
++#endif
+
+Added: src/xmpp/xmpp_callback.c
+===================================================================
+--- src/xmpp/xmpp_callback.c	2005-02-12 19:14:29 UTC (rev 10)
++++ src/xmpp/xmpp_callback.c	2005-02-13 01:13:42 UTC (rev 11)
+@@ -0,0 +1,11 @@
++#include &quot;xmpp_callback.h&quot;
++
++
++void xmpp_callback_stream_begin_cb (Egxp_Message * msg, void * eg) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_callback_stream_begin_cb\n&quot;);
++#endif 
++  assert (msg &amp;&amp; eg);
++  
++  
++}
+
+Added: src/xmpp/xmpp_callback.h
+===================================================================
+--- src/xmpp/xmpp_callback.h	2005-02-12 19:14:29 UTC (rev 10)
++++ src/xmpp/xmpp_callback.h	2005-02-13 01:13:42 UTC (rev 11)
+@@ -0,0 +1,13 @@
++#ifndef xmpp_opcode_header_h_
++#define xmpp_opcode_header_h_
++
++#include &quot;egxp/egxp_node_struct.h&quot;
++
++
++/**
++ * Stream begin callback
++ */
++void xmpp_callback_stream_begin_cb (Egxp_Message * msg, void * eg);
++
++
++#endif
+
+Added: src/xmpp/xmpp_opcode.c
+===================================================================
+--- src/xmpp/xmpp_opcode.c	2005-02-12 19:14:29 UTC (rev 10)
++++ src/xmpp/xmpp_opcode.c	2005-02-13 01:13:42 UTC (rev 11)
+@@ -0,0 +1,43 @@
++#include &lt;assert.h&gt;
++
++#include &quot;egxp/egxp_node.h&quot;
++
++#include &quot;xmpp_opcode.h&quot;
++
++void xmpp_opcode_init (Egxp * eg) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_opcode_init\n&quot;);
++#endif 
++  assert (eg &amp;&amp; eg-&gt;opcodes);
++
++  /* *************** */
++  /* register opcode */
++  /* *************** */
++  /*     stream      */
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_TAG_STREAM);
++  
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_ATT_XMLNS);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_ATT_XMLNS_STREAM);
++  
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_STREAM_XMLNS);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_STREAM_XMLNS_STREAM);
++  egxp_opcode_add (eg-&gt;opcodes, XMPP_VALUE_STREAM_VERSION);
++  
++  
++  
++  /********************/
++  /********************/
++  /*  Protocol Init   */
++  /********************/
++  /********************/
++  /* define stream */
++  Egxp_Node * stream = egxp_node_new (egxp_opcode_get_id (eg-&gt;opcodes, XMPP_TAG_STREAM));
++  egxp_node_add_child (eg-&gt;root, stream);
++  
++  egxp_node_add_condition (stream, egxp_condition_new (egxp_opcode_get_id (eg-&gt;opcodes, XMPP_ATT_XMLNS),
++						       egxp_opcode_get_id (eg-&gt;opcodes, XMPP_VALUE_STREAM_XMLNS)));
++  
++  egxp_node_add_condition (stream, egxp_condition_new (egxp_opcode_get_id (eg-&gt;opcodes, XMPP_ATT_XMLNS_STREAM),
++						       egxp_opcode_get_id (eg-&gt;opcodes, XMPP_VALUE_STREAM_XMLNS_STREAM)));
++  
++}
+
+Added: src/xmpp/xmpp_opcode.h
+===================================================================
+--- src/xmpp/xmpp_opcode.h	2005-02-12 19:14:29 UTC (rev 10)
++++ src/xmpp/xmpp_opcode.h	2005-02-13 01:13:42 UTC (rev 11)
+@@ -0,0 +1,39 @@
++#ifndef xmpp_core_header_h_
++#define xmpp_core_header_h_
++
++#include &quot;egxp/egxp.h&quot;
++
++/**
++ * Here we define the xmpp opcodes
++ */
++#define XMPP_TAG_STREAM &quot;stream:stream&quot;
++
++#define XMPP_ATT_XMLNS          &quot;xmlns&quot;
++#define XMPP_ATT_XMLNS_STREAM   &quot;xmlns:stream&quot;
++
++#define XMPP_VALUE_STREAM_XMLNS          &quot;jabber:client&quot;
++#define XMPP_VALUE_STREAM_XMLNS_STREAM   &quot;<A HREF="http://etherx.jabber.org/streams">http://etherx.jabber.org/streams</A>&quot;
++#define XMPP_VALUE_STREAM_VERSION        &quot;1.0&quot;
++
++
++
++#define XMPP_ATT_TYPE           &quot;type&quot;
++#define XMPP_ATT_TO             &quot;to&quot;
++#define XMPP_ATT_XMLNS          &quot;xmlns&quot;
++#define XMPP_ATT_VERSION        &quot;version&quot;
++#define XMPP_ATT_ID             &quot;id&quot;
++#define XMPP_ATT_JID            &quot;jid&quot;
++#define XMPP_ATT_FROM           &quot;from&quot;
++#define XMPP_ATT_NAME           &quot;name&quot;
++
++
++
++
++/**
++ * Add the xmpp opcode inside the opcode variable
++ * @param opcode: use to store xmpp opcode
++ */
++void xmpp_opcode_init (Egxp * eg);
++
++
++#endif
+
+Added: src/xmpp/xmpp_struct.h
+===================================================================
+--- src/xmpp/xmpp_struct.h	2005-02-12 19:14:29 UTC (rev 10)
++++ src/xmpp/xmpp_struct.h	2005-02-13 01:13:42 UTC (rev 11)
+@@ -0,0 +1,17 @@
++#ifndef xmpp_struct_header_h_
++#define xmpp_struct_header_h_
++
++#include &lt;Ecore_Data.h&gt;
++
++#include &quot;egxp/egxp.h&quot;
++
++typedef struct _Xmpp Xmpp;
++#define XMPP(o) ((Xmpp*)o)
++struct _Xmpp {
++  /* This variable is really important, it's used to destroy itself */
++  Egxp_Extension extension;
++  
++  int t;
++};
++
++#endif
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000006.html">[Eim-svn] r10 - / src/egxp
+</A></li>
+	<LI>Next message: <A HREF="000008.html">[Eim-svn] r12 - / src/egxp src/xmpp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7">[ date ]</a>
+              <a href="thread.html#7">[ thread ]</a>
+              <a href="subject.html#7">[ subject ]</a>
+              <a href="author.html#7">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,428 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r23 - / src/xmpp src/xmpp-im
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-March/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r23%20-%20/%20src/xmpp%20src/xmpp-im&In-Reply-To=%3C200503030048.j230mccI007221%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000020.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r23 - / src/xmpp src/xmpp-im</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r23%20-%20/%20src/xmpp%20src/xmpp-im&In-Reply-To=%3C200503030048.j230mccI007221%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r23 - / src/xmpp src/xmpp-im">jol at sheep.berlios.de
+       </A><BR>
+    <I>Thu Mar  3 01:48:38 CET 2005</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000020.html">[Eim-svn] r24 - / src src/gui
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#19">[ date ]</a>
+              <a href="thread.html#19">[ thread ]</a>
+              <a href="subject.html#19">[ subject ]</a>
+              <a href="author.html#19">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-03-03 01:48:31 +0100 (Thu, 03 Mar 2005)
+New Revision: 23
+
+Modified:
+   ChangeLog
+   src/xmpp-im/test.c
+   src/xmpp-im/xmpp_im_contact.c
+   src/xmpp-im/xmpp_im_contact.h
+   src/xmpp-im/xmpp_im_roster.c
+   src/xmpp-im/xmpp_im_roster.h
+   src/xmpp-im/xmpp_im_struct.h
+   src/xmpp/xmpp_jid.c
+   src/xmpp/xmpp_jid.h
+Log:
+- Fix a problem inside the xmpp_im_contact_remove_all_group.
+- Add xmpp_jid_get_bar and xmpp_jid_get_full.
+- Add GPL license within some files.
+
+I'm going to take a look at edje in order to use it. Another important stuff is to create a preference window and a dialog window using ewl. 
+
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-02-28 21:24:41 UTC (rev 22)
++++ ChangeLog	2005-03-03 00:48:31 UTC (rev 23)
+@@ -1,3 +1,8 @@
++2005-03-03(jol):
++	- Fix a problem inside the xmpp_im_contact_remove_all_group.
++	- Add xmpp_jid_get_bar and xmpp_jid_get_full.
++	- Add GPL license within some files.
++	
+ 2005-02-28(jol):
+ 	- Just a first implementation of the Roster, Group and Contact
+ 	- Give an test example to check memory leak and the behavior of the new code
+
+Modified: src/xmpp/xmpp_jid.c
+===================================================================
+--- src/xmpp/xmpp_jid.c	2005-02-28 21:24:41 UTC (rev 22)
++++ src/xmpp/xmpp_jid.c	2005-03-03 00:48:31 UTC (rev 23)
+@@ -42,6 +42,7 @@
+   return tmp;
+ }
+ 
++
+ void xmpp_jid_free (Xmpp_JID * jid) {
+ #ifdef XMPP_DEBUG
+   printf(&quot;TRACE: xmpp_jid_free\n&quot;);
+@@ -54,3 +55,48 @@
+ 
+   FREE (jid);
+ }
++
++
++char * xmpp_jid_get_bar (Xmpp_JID * jid) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_jid_get_bar\n&quot;);
++#endif 
++  assert (jid);
++  
++  /* compute the size <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">user at host</A>\0 */
++  unsigned int u = jid-&gt;user?strlen (jid-&gt;user):0;
++  unsigned int h = jid-&gt;host?strlen (jid-&gt;host):0;
++  
++  /* initialize the structre */
++  char * tmp = (char*) malloc ( (u + h + 2) * sizeof (char));
++  tmp = strncpy (tmp, jid-&gt;user, u);
++  tmp[u] = '@';
++  strncpy (tmp + ((u+1) * sizeof (char)), jid-&gt;host, h);
++  tmp [u + h + 1] = '\0';
++  
++  return tmp;
++}
++
++
++char * xmpp_jid_get_full (Xmpp_JID * jid) {
++ #ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_jid_get_full\n&quot;);
++#endif 
++  assert (jid);
++  
++  /* compute the size <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">user at host</A>/resource\0 */
++  unsigned int u = jid-&gt;user?strlen (jid-&gt;user):0;
++  unsigned int h = jid-&gt;host?strlen (jid-&gt;host):0;
++  unsigned int r = jid-&gt;resource?strlen (jid-&gt;resource):0;
++  
++  /* initialize the structre */
++  char * tmp = (char*) malloc ( (u + h + r + 3) * sizeof (char));
++  tmp = strncpy (tmp, jid-&gt;user, u);
++  tmp[u] = '@';
++  strncpy (tmp + ((u+1) * sizeof (char)), jid-&gt;host, h);
++  tmp[u + 1 + h] = '/';
++  strncpy (tmp + ((u + 2 + h) * sizeof (char)), jid-&gt;resource, r);
++  tmp [u + h + r + 2] = '\0';
++  
++  return tmp;
++}
+
+Modified: src/xmpp/xmpp_jid.h
+===================================================================
+--- src/xmpp/xmpp_jid.h	2005-02-28 21:24:41 UTC (rev 22)
++++ src/xmpp/xmpp_jid.h	2005-03-03 00:48:31 UTC (rev 23)
+@@ -25,7 +25,6 @@
+  * Here we define the Jid structure and a set of function
+  * to handle the jid
+  */
+-
+ typedef struct _Xmpp_JID Xmpp_JID;
+ #define XMPP_JID(o) ((Xmpp_JID*)o)
+ struct _Xmpp_JID {
+@@ -43,10 +42,26 @@
+  */
+ Xmpp_JID * xmpp_jid_new (char * user, char * host, char * resource);
+ 
++
+ /**
+  * Free the structure
+  */
+ void xmpp_jid_free (Xmpp_JID * jid);
+ 
+ 
++/**
++ * Get the jid in the bare format
++ * @param jid: The jid used to get the bar jid
++ * @return the jid bare, you should free the memory
++ */
++char * xmpp_jid_get_bar (Xmpp_JID * jid);
++
++
++/**
++ * Get the jid in the full format
++ * @param jid: The jid used to get the full jid
++ * @return the full jid, you shoud free memory
++ */
++char * xmpp_jid_get_full (Xmpp_JID * jid);
++
+ #endif
+
+Modified: src/xmpp-im/test.c
+===================================================================
+--- src/xmpp-im/test.c	2005-02-28 21:24:41 UTC (rev 22)
++++ src/xmpp-im/test.c	2005-03-03 00:48:31 UTC (rev 23)
+@@ -15,19 +15,27 @@
+   XmppIM_Contact * contact;
+   Xmpp_JID * jid;
+   XmppIM_Roster * roster;
+-
++  XmppIM_RosterGroup * group;
++  
+   roster = xmpp_im_roster_new ();
+ 
+   char tmp[40];
+-  int i;
+-  for (i = 0; i &lt; 300; i++) {
++  int i, j;
++  for (i = 0; i &lt; 3; i++) {
+     sprintf(tmp, &quot;user%d&quot;, i);
+     jid = xmpp_jid_new (tmp, &quot;host&quot;, &quot;resource&quot;);
+     sprintf(tmp, &quot;surname%d&quot;, i);
+     contact = xmpp_im_contact_new (jid, tmp);
+     xmpp_im_roster_add_contact (roster, contact);
++  
++    for (j = 0; j &lt; 3; j++) {
++      sprintf(tmp, &quot;group %d&quot;, j);
++      xmpp_im_roster_add_contact_to_group (roster, contact, tmp);
++    }  
+   }
+   
++  xmpp_im_roster_display (roster);
++
+   xmpp_im_roster_free (roster);
+ 
+   return 0;
+
+Modified: src/xmpp-im/xmpp_im_contact.c
+===================================================================
+--- src/xmpp-im/xmpp_im_contact.c	2005-02-28 21:24:41 UTC (rev 22)
++++ src/xmpp-im/xmpp_im_contact.c	2005-03-03 00:48:31 UTC (rev 23)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #include &lt;assert.h&gt;
+ #include &lt;stdio.h&gt;
+ 
+@@ -8,9 +28,11 @@
+   printf(&quot;TRACE:xmpp_im_contact_new\n&quot;);
+ #endif
+   assert (jid);
+-  
++
++  /* create the contact variable */
+   XmppIM_Contact * tmp = XMPPIM_CONTACT(malloc(sizeof (XmppIM_Contact)));
+   
++  /* set default variable */
+   tmp-&gt;jid = jid;
+   tmp-&gt;name = strdup (name);
+   tmp-&gt;groups = ecore_list_new ();
+@@ -53,6 +75,7 @@
+   }
+   
+   /* the list must be empty */
++  ecore_list_clear (c-&gt;groups);
+   assert (ecore_list_is_empty (c-&gt;groups));
+ }
+ 
+@@ -65,6 +88,7 @@
+   XmppIM_Contact * c = XMPPIM_CONTACT(contact);
+   
+   assert (c);
+-  
+-  printf(&quot;Surname %s\n&quot;, c-&gt;name);
++  char * tmp = xmpp_jid_get_full (c-&gt;jid);
++  printf(&quot;Surname %s jid: %s\n&quot;, c-&gt;name, tmp);
++  FREE (tmp);
+ }
+
+Modified: src/xmpp-im/xmpp_im_contact.h
+===================================================================
+--- src/xmpp-im/xmpp_im_contact.h	2005-02-28 21:24:41 UTC (rev 22)
++++ src/xmpp-im/xmpp_im_contact.h	2005-03-03 00:48:31 UTC (rev 23)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #ifndef xmpp_im_contact_headers
+ #define xmpp_im_contact_headers
+ 
+
+Modified: src/xmpp-im/xmpp_im_roster.c
+===================================================================
+--- src/xmpp-im/xmpp_im_roster.c	2005-02-28 21:24:41 UTC (rev 22)
++++ src/xmpp-im/xmpp_im_roster.c	2005-03-03 00:48:31 UTC (rev 23)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #include &lt;assert.h&gt;
+ #include &lt;stdlib.h&gt;
+ #include &lt;string.h&gt;
+@@ -136,7 +156,7 @@
+   
+   XmppIM_RosterGroup * tmp = XMPPIM_ROSTERGROUP(malloc (sizeof (XmppIM_RosterGroup)));
+   assert(tmp != NULL);
+-  printf(&quot;XmppIM_RosterGroup: %X %d\n&quot;, tmp, sizeof (XmppIM_RosterGroup));
++  
+   /* allocate memory for the groupname  and the users list */
+   tmp-&gt;groupname = strdup (groupname);
+   tmp-&gt;users = ecore_list_new ();
+@@ -206,7 +226,7 @@
+   assert (g != NULL);
+   assert (g-&gt;users != NULL);
+ 
+-
++  printf(&quot;-- Group Name: %s\n&quot;, g-&gt;groupname);
+   ecore_list_for_each (g-&gt;users, ECORE_FOR_EACH(xmpp_im_contact_display), NULL);
+ }
+ 
+
+Modified: src/xmpp-im/xmpp_im_roster.h
+===================================================================
+--- src/xmpp-im/xmpp_im_roster.h	2005-02-28 21:24:41 UTC (rev 22)
++++ src/xmpp-im/xmpp_im_roster.h	2005-03-03 00:48:31 UTC (rev 23)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #ifndef header_xmpp_im_roster_h_
+ #define header_xmpp_im_roster_h_
+ 
+
+Modified: src/xmpp-im/xmpp_im_struct.h
+===================================================================
+--- src/xmpp-im/xmpp_im_struct.h	2005-02-28 21:24:41 UTC (rev 22)
++++ src/xmpp-im/xmpp_im_struct.h	2005-03-03 00:48:31 UTC (rev 23)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #ifndef header_xmpp_im_struct_header
+ #define header_xmpp_im_struct_header
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000020.html">[Eim-svn] r24 - / src src/gui
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#19">[ date ]</a>
+              <a href="thread.html#19">[ thread ]</a>
+              <a href="subject.html#19">[ subject ]</a>
+              <a href="author.html#19">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

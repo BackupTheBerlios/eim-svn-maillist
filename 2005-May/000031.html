@@ -1,0 +1,570 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r35 - / src src/gui
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-May/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r35%20-%20/%20src%20src/gui&In-Reply-To=%3C200505291303.j4TD340Q022967%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000030.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r35 - / src src/gui</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r35%20-%20/%20src%20src/gui&In-Reply-To=%3C200505291303.j4TD340Q022967%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r35 - / src src/gui">jol at sheep.berlios.de
+       </A><BR>
+    <I>Sun May 29 15:03:04 CEST 2005</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000030.html">[Eim-svn] r34 - / data/themes/default data/themes/default/img data/themes/default/parts data/themes/default/programs doc src/egxp src/gui
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#31">[ date ]</a>
+              <a href="thread.html#31">[ thread ]</a>
+              <a href="subject.html#31">[ subject ]</a>
+              <a href="author.html#31">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-05-29 15:02:58 +0200 (Sun, 29 May 2005)
+New Revision: 35
+
+Added:
+   src/conf.c
+   src/conf.h
+Modified:
+   ChangeLog
+   src/Makefile.am
+   src/eim.c
+   src/gui/gui_main.c
+   src/gui/properties.c
+   src/gui/properties.h
+Log:
+- begin the config stuff
+- fix compilation error
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-05-07 15:44:03 UTC (rev 34)
++++ ChangeLog	2005-05-29 13:02:58 UTC (rev 35)
+@@ -1,3 +1,7 @@
++2005-05-30(jol):
++	- begin the config stuff
++	- fix compilation error
++	
+ 2005-05-07(jol):
+ 	- Add some documentation
+ 	- Continue some test with edje, even if it's not used for now
+
+Modified: src/Makefile.am
+===================================================================
+--- src/Makefile.am	2005-05-07 15:44:03 UTC (rev 34)
++++ src/Makefile.am	2005-05-29 13:02:58 UTC (rev 35)
+@@ -8,7 +8,8 @@
+ bin_PROGRAMS = eim
+ 
+ eim_SOURCES = \
+-	eim.c
++	eim.c  \
++	conf.c
+ 
+ eim_CFLAGS = \
+ 	-I$(top_srcdir)/src           \
+
+Added: src/conf.c
+===================================================================
+--- src/conf.c	2005-05-07 15:44:03 UTC (rev 34)
++++ src/conf.c	2005-05-29 13:02:58 UTC (rev 35)
+@@ -0,0 +1,37 @@
++#include &lt;assert.h&gt;
++#include &quot;Ecore_Config.h&quot;
++#include &quot;conf.h&quot;
++
++
++/**
++ * Initialize the config.
++ * @param eg: the Egxp structure
++ */
++int eim_config_init (Egxp * eg) {
++  assert (eg);
++
++  if (ecore_config_init (&quot;eim&quot;) == ECORE_CONFIG_ERR_FAIL) {
++    printf(&quot;WARNING: config file not available\n&quot;);
++  }
++  
++  // load default config
++
++  // save in order to have config object
++  eim_config_save ();
++
++  return 1;
++}
++
++
++/**
++ * Save the configuration
++ */
++void eim_config_save () {
++  ecore_config_save ();
++}
++
++
++void eim_config_shutdown () {
++  eim_config_save ();
++  ecore_config_shutdown ();
++}
+
+Added: src/conf.h
+===================================================================
+--- src/conf.h	2005-05-07 15:44:03 UTC (rev 34)
++++ src/conf.h	2005-05-29 13:02:58 UTC (rev 35)
+@@ -0,0 +1,14 @@
++#ifndef conf_header_
++#define conf_header_
++
++#include &quot;egxp/egxp.h&quot;
++
++
++int eim_config_init (Egxp * eg);
++
++
++void eim_config_save ();
++
++void eim_config_shutdown ();
++
++#endif
+
+Modified: src/eim.c
+===================================================================
+--- src/eim.c	2005-05-07 15:44:03 UTC (rev 34)
++++ src/eim.c	2005-05-29 13:02:58 UTC (rev 35)
+@@ -25,7 +25,9 @@
+ 
+ #include &lt;Ewl.h&gt;
+ 
++#include &quot;egxp/egxp.h&quot;
+ #include &quot;gui/gui_main.h&quot;
++#include &quot;conf.h&quot;
+ 
+ 
+ static int eim_handler_signal_exit (void *data, int ev_type, void *ev) {
+@@ -82,24 +84,38 @@
+   
+   
+   /* initialize the core */
+-  ecore_init ();
++  if (!ecore_init()) {
++    printf(&quot;ERROR: can't initialize Ecore.\n&quot;);
++    return -1;
++  }
+   if (!ewl_init(&amp;argc, argv)) {
+-    printf(&quot;Unable to init ewl\n&quot;);
++    printf(&quot;ERROR: can't initialize Ewl\n&quot;);
+     return -1;
+   }
+ 
+   ecore_event_handler_add (ECORE_EVENT_SIGNAL_EXIT, eim_handler_signal_exit, NULL);
+-  if (!ecore_con_init ()) return -1;
+-  
++
++  if (!ecore_con_init ()){
++    printf(&quot;ERROR: can't initialize Ecore Connection\n&quot;);
++    return -1;
++  }
++
++  /* define the args */
+   ecore_app_args_set (argc, (const char **) argv);
+ 
++  Egxp * eg = egxp_new ();
++
++  eim_config_init (eg);
++  
++
+   if (gui_main_init2 (&quot;eim&quot;, theme_file)) return -1;
+   
+   /* process the main loop */
+   ecore_main_loop_begin ();
++  printf(&quot;Here\n&quot;);
+ 
+-
+   /* shutdown all ecore service */
++  eim_config_shutdown ();
+   ewl_shutdown ();
+   ecore_shutdown ();
+   
+
+Modified: src/gui/gui_main.c
+===================================================================
+--- src/gui/gui_main.c	2005-05-07 15:44:03 UTC (rev 34)
++++ src/gui/gui_main.c	2005-05-29 13:02:58 UTC (rev 35)
+@@ -237,46 +237,52 @@
+   Ewl_Widget     * box_item = NULL;
+   Ewl_Widget     * menu;
+   
+-/*   /\* create the main windows *\/ */
+-/*   main_win = ewl_window_new(); */
++
+   
+-/*   /\* define size *\/ */
+-/*   ewl_object_size_request(EWL_OBJECT(main_win), 80, 300); */
+-/*   ewl_object_fill_policy_set(EWL_OBJECT(main_win), EWL_FLAG_FILL_ALL); */
++
++
++
++
++  /* create the main windows */
++  main_win = ewl_window_new();
+   
+-/*   /\* define title *\/ */
+-/*   ewl_window_title_set(EWL_WINDOW(main_win), */
+-/* 		       &quot;The Enlightenment Instant Messenger&quot;); */
++  /* define size */
++  ewl_object_size_request(EWL_OBJECT(main_win), 80, 300);
++  ewl_object_fill_policy_set(EWL_OBJECT(main_win), EWL_FLAG_FILL_ALL);
+   
+-/*   ewl_callback_append(main_win, EWL_CALLBACK_DELETE_WINDOW, _gui_main_destroy_cb, NULL); */
+-/*   ewl_window_name_set(EWL_WINDOW(main_win), &quot;Enlightenment Instant Messenger&quot;); */
+-/*   ewl_window_class_set(EWL_WINDOW(main_win), &quot;Enlightenment Instant Messenger&quot;); */
+-/*   ewl_widget_show(main_win); */
++  /* define title */
++  ewl_window_title_set(EWL_WINDOW(main_win),
++		       &quot;The Enlightenment Instant Messenger&quot;);
++  
++  ewl_callback_append(main_win, EWL_CALLBACK_DELETE_WINDOW, _gui_main_destroy_cb, NULL);
++  ewl_window_name_set(EWL_WINDOW(main_win), &quot;Enlightenment Instant Messenger&quot;);
++  ewl_window_class_set(EWL_WINDOW(main_win), &quot;Enlightenment Instant Messenger&quot;);
++  ewl_widget_show(main_win);
+ 
+   
+-/*   /\* create the container *\/ */
+-/*   box = ewl_vbox_new(); */
+-/*   ewl_container_child_append(EWL_CONTAINER(main_win), box); */
+-/*   ewl_object_fill_policy_set(EWL_OBJECT(box), EWL_FLAG_FILL_ALL); */
+-/*   ewl_widget_show(box); */
++  /* create the container */
++  box = ewl_vbox_new();
++  ewl_container_child_append(EWL_CONTAINER(main_win), box);
++  ewl_object_fill_policy_set(EWL_OBJECT(box), EWL_FLAG_FILL_ALL);
++  ewl_widget_show(box);
+   
+   
+-/*   /\* create the tree root object *\/ */
+-/*   tree = ewl_tree_new (1);  */
+-/*   ewl_container_child_append (EWL_CONTAINER(box), tree); */
+-/*   ewl_widget_show(tree); */
++  /* create the tree root object */
++  tree = ewl_tree_new (1);
++  ewl_container_child_append (EWL_CONTAINER(box), tree);
++  ewl_widget_show(tree);
+ 
+-/*   /\* create the menu *\/ */
+-/*   menu = create_menu (main_win); */
++  /* create the menu */
++  menu = create_menu (main_win);
+   
+-/*   /\* Add an item *\/ */
+-/*   create_tree_item (tree, NULL, &quot;entry 1&quot;, menu); */
+-/*   create_tree_item (tree, NULL, &quot;entry 2&quot;, menu); */
+-/*   create_tree_item (tree, NULL, &quot;entry 3&quot;, menu); */
++  /* Add an item */
++  create_tree_item (tree, NULL, &quot;entry 1&quot;, menu);
++  create_tree_item (tree, NULL, &quot;entry 2&quot;, menu);
++  create_tree_item (tree, NULL, &quot;entry 3&quot;, menu);
+ 
+   /* test properties windows */
+-  main_win = create_properties_window ();
+-  ewl_widget_show (main_win);
++  /*  main_win = create_properties_dialog (NULL);
++      ewl_widget_show (main_win);****/
+   
+   return 0;
+ }
+
+Modified: src/gui/properties.c
+===================================================================
+--- src/gui/properties.c	2005-05-07 15:44:03 UTC (rev 34)
++++ src/gui/properties.c	2005-05-29 13:02:58 UTC (rev 35)
+@@ -1,14 +1,57 @@
+ #include &lt;assert.h&gt;
++#include &lt;string.h&gt;
+ #include &quot;properties.h&quot;
+ 
+ 
+ /**
++ * Define the properties for the Properties page.
++ * It contains all parameters available inside the Egxp and its extension
++ * We use this structure has temporary variable.
++ */
++typedef struct _Properties Properties;
++#define PROPERTIES(o) ((Properties*)o)
++struct _Properties {
++  /* account */
++  char * jabber_id;
++  char * password;
++  char * resource;
++  int priority;
++
++  /* connection */
++  int use_ssl;
++  int allow_plaintext;
++  int send_keep_alive;
++  // manual server host port
++
++  /* details */
++
++  /* preferences */
++  int auto_connect;
++  int auto_reconnect;
++  int log_history;
++  int ignore_ssl_warning;
++};
++
++
++
++Properties * _properties_new () {
++  Properties * tmp = PROPERTIES(malloc (sizeof(Properties)));
++  memset (tmp, 0, sizeof (Properties));
++
++  return tmp;
++}
++
++
++
++
++
++/**
+  * Create the Account page and add it to the notebook
+  *  - jabber id
+  *  - password
+  *  - resource + priority
+  */
+-void _create_account_property_page (Ewl_Widget * notebook) {
++void _create_account_property_page (Ewl_Widget * notebook, Egxp * eg) {
+   assert (notebook);
+   
+   Ewl_Widget * tab;
+@@ -65,7 +108,7 @@
+  * - Send &quot;Keep-Alive&quot; packets (for NAT timeouts)
+  * - Manually specify Server Host/Port
+  */
+-void _create_connection_property_page (Ewl_Widget * notebook) {
++void _create_connection_property_page (Ewl_Widget * notebook, Egxp *eg) {
+   assert (notebook);
+   
+   Ewl_Widget * tab;
+@@ -73,6 +116,7 @@
+   Ewl_Widget * hbox;
+   Ewl_Widget * text;
+   Ewl_Widget * entry;
++  Ewl_Widget * misc;
+ 
+   /* create the tab entry */
+   tab = ewl_text_new (&quot;Connection&quot;);
+@@ -82,7 +126,22 @@
+   vbox = ewl_vbox_new ();
+   ewl_widget_show (vbox);
+   
++  /* use SSL encryption */
++  misc = ewl_checkbutton_new (&quot;Use SSL encryption&quot;);
++  ewl_container_child_append (EWL_CONTAINER(vbox), misc);
++  ewl_widget_show(misc);
+ 
++  /* allow plain text login */
++  misc = ewl_checkbutton_new (&quot;Allow plain text login&quot;);
++  ewl_container_child_append (EWL_CONTAINER(vbox), misc);
++  ewl_widget_show(misc);
++
++  /* Send &quot;keep alive&quot; packets (for NAT timeouts) */
++  misc = ewl_checkbutton_new (&quot;Send \&quot;keep alive\&quot; packets (for NAT timeouts)&quot;);
++  ewl_container_child_append (EWL_CONTAINER(vbox), misc);
++  ewl_widget_show(misc);
++  
++
+   /* add the tab and vbox to the notebook */
+   ewl_notebook_page_append (EWL_NOTEBOOK(notebook), tab, vbox);
+ }
+@@ -94,7 +153,7 @@
+  * - Edit Personal Information
+  * - Allows to change password on the server side
+  */
+-void _create_details_property_page (Ewl_Widget * notebook) {
++void _create_details_property_page (Ewl_Widget * notebook, Egxp *eg) {
+   assert (notebook);
+   
+   Ewl_Widget * tab;
+@@ -116,6 +175,8 @@
+   ewl_notebook_page_append (EWL_NOTEBOOK(notebook), tab, vbox);
+ }
+ 
++
++
+ /**
+  * Create the preferences property page and add it to the notebook
+  * - Automatically connect on startup
+@@ -123,7 +184,7 @@
+  * - Log message history
+  * - Ignore SSL warnings
+  */
+-void _create_preferences_property_page (Ewl_Widget * notebook) {
++void _create_preferences_property_page (Ewl_Widget * notebook, Egxp * eg) {
+   assert (notebook);
+   
+   Ewl_Widget * tab;
+@@ -131,6 +192,7 @@
+   Ewl_Widget * hbox;
+   Ewl_Widget * text;
+   Ewl_Widget * entry;
++  Ewl_Widget * misc;
+ 
+   /* create the tab entry */
+   tab = ewl_text_new (&quot;Preferences&quot;);
+@@ -140,7 +202,26 @@
+   vbox = ewl_vbox_new ();
+   ewl_widget_show (vbox);
+   
++  /* Automatically connect on startup */
++  misc = ewl_checkbutton_new (&quot;Automatically connect on startup&quot;);
++  ewl_container_child_append (EWL_CONTAINER(vbox), misc);
++  ewl_widget_show(misc);
+ 
++  /* Automatically reconnect if disconnected */
++  misc = ewl_checkbutton_new (&quot;Automatically reconnect if disconnected&quot;);
++  ewl_container_child_append (EWL_CONTAINER(vbox), misc);
++  ewl_widget_show(misc);
++
++  /* Log message history */
++  misc = ewl_checkbutton_new (&quot;Log message history&quot;);
++  ewl_container_child_append (EWL_CONTAINER(vbox), misc);
++  ewl_widget_show(misc);
++
++  /* Ignore SSL warnings */
++  misc = ewl_checkbutton_new (&quot;Ignore SSL warnings&quot;);
++  ewl_container_child_append (EWL_CONTAINER(vbox), misc);
++  ewl_widget_show(misc);
++  
+   /* add the tab and vbox to the notebook */
+   ewl_notebook_page_append (EWL_NOTEBOOK(notebook), tab, vbox);
+ }
+@@ -155,25 +236,33 @@
+  * This windows should contains all properties
+  * @return the newly created windows
+  */
+-Ewl_Widget * create_properties_window () {
+-  Ewl_Widget * win;
++Ewl_Widget * create_properties_dialog (Egxp * eg) {
++  Ewl_Widget * dialog;
+   Ewl_Widget * notebook;
+   Ewl_Widget * vbox;
++  Ewl_Widget * button;
+ 
+-  /* create the new window */
+-  win = ewl_window_new ();
+-  ewl_object_size_request(EWL_OBJECT(win), 300, 80); 
+-  ewl_object_fill_policy_set(EWL_OBJECT(win), EWL_FLAG_FILL_ALL);
++  /* create the new dialog */
++  dialog = ewl_dialog_new(EWL_POSITION_BOTTOM);
++  ewl_dialog_has_separator_set(EWL_DIALOG(dialog), 1);
++
++  /* create the ok button */
++  button = ewl_dialog_button_add(EWL_DIALOG(dialog),&quot;OK&quot;, EWL_RESPONSE_OK);
++  ewl_container_child_append(EWL_CONTAINER(dialog), button);
++  //ewl_callback_append(o, EWL_CALLBACK_CLICKED, dialog_clicked_cb, dialog);
++  ewl_widget_show(button);
+   
+-  ewl_window_title_set (EWL_WINDOW(win), &quot;EIM Properties&quot;);
+-  ewl_window_name_set (EWL_WINDOW(win), &quot;EIM Properties&quot;);
+-  ewl_window_class_set (EWL_WINDOW(win), &quot;EIM Properties&quot;);
+-  // should insert the CALLBACK DELETE FUNCTION
++  
++  /* create the cancel button */
++  button = ewl_dialog_button_left_add(EWL_DIALOG(dialog),&quot;Cancel&quot;, EWL_RESPONSE_CANCEL);
++  ewl_container_child_append(EWL_CONTAINER(dialog), button);
++  //ewl_callback_append(o, EWL_CALLBACK_CLICKED, dialog_clicked_cb, dialog);
++  ewl_widget_show(button);
++  
+ 
+   /* create the vbox which contains the notebook */
+   vbox = ewl_vbox_new ();
+   ewl_object_fill_policy_set (EWL_OBJECT(vbox), EWL_FLAG_FILL_SHRINK);
+-  ewl_container_child_append (EWL_CONTAINER (win), vbox);
+   ewl_widget_show (vbox);
+ 
+   /* create the note book */
+@@ -182,14 +271,17 @@
+   ewl_widget_appearance_set (notebook, &quot;window&quot;);
+   
+   /* create the Account Page */
+-  _create_account_property_page (notebook);
+-  _create_connection_property_page (notebook);
+-  _create_details_property_page (notebook);
+-  _create_preferences_property_page (notebook);
+-
+-  /* after added pages inside the notebook, we add it to the window */
++  _create_account_property_page (notebook, eg);
++  _create_connection_property_page (notebook, eg);
++  _create_details_property_page (notebook, eg);
++  _create_preferences_property_page (notebook, eg);
++  
++  /* after added pages inside the notebook, we add it to the dialog */
+   ewl_container_child_append (EWL_CONTAINER(vbox), notebook);
+   ewl_widget_show (notebook);
+   
+-  return win;
++  ewl_dialog_widget_add(EWL_DIALOG(dialog), vbox);
++  ewl_object_alignment_set(EWL_OBJECT(dialog), EWL_FLAG_ALIGN_CENTER);
++  
++  return dialog;
+ }
+
+Modified: src/gui/properties.h
+===================================================================
+--- src/gui/properties.h	2005-05-07 15:44:03 UTC (rev 34)
++++ src/gui/properties.h	2005-05-29 13:02:58 UTC (rev 35)
+@@ -3,10 +3,12 @@
+ 
+ #include &quot;Ewl.h&quot;
+ 
++#include &quot;egxp/egxp.h&quot;
++
+ /**
+  * This windows should contains all properties
+  */
+-Ewl_Widget * create_properties_window ();
++Ewl_Widget * create_properties_dialog (Egxp * eg);
+ 
+ 
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000030.html">[Eim-svn] r34 - / data/themes/default data/themes/default/img data/themes/default/parts data/themes/default/programs doc src/egxp src/gui
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#31">[ date ]</a>
+              <a href="thread.html#31">[ thread ]</a>
+              <a href="subject.html#31">[ subject ]</a>
+              <a href="author.html#31">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

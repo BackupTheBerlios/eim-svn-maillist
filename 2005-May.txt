@@ -1,0 +1,1693 @@
+From jol at sheep.berlios.de  Sat May  7 17:44:07 2005
+From: jol at sheep.berlios.de (Joël Vennin at BerliOS)
+Date: Sat, 7 May 2005 17:44:07 +0200
+Subject: [Eim-svn] r34 - / data/themes/default data/themes/default/img data/themes/default/parts data/themes/default/programs doc src/egxp src/gui
+Message-ID: <200505071544.j47Fi7R9024069@sheep.berlios.de>
+
+Author: jol
+Date: 2005-05-07 17:44:03 +0200 (Sat, 07 May 2005)
+New Revision: 34
+
+Added:
+   data/themes/default/img/noauth.png
+   doc/mainpage.dxt
+   src/gui/properties.c
+   src/gui/properties.h
+Removed:
+   data/themes/default/default.edj
+Modified:
+   ChangeLog
+   data/themes/default/default.edc
+   data/themes/default/parts/main.edc
+   data/themes/default/programs/main.edc
+   doc/eim.doxygen
+   src/egxp/egxp.h
+   src/gui/Makefile.am
+   src/gui/SConscript
+   src/gui/gui_main.c
+Log:
+- Add some documentation
+- Continue some test with edje, even if it's not used for now
+- Use ewl to create the default graphic interface, even if it not 
+  for now eyes candy, it will allow us to have a first version.
+- Begin to create the Account Properties Window (use psi as model for now).
+
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-04-20 12:42:36 UTC (rev 33)
++++ ChangeLog	2005-05-07 15:44:03 UTC (rev 34)
+@@ -1,3 +1,10 @@
++2005-05-07(jol):
++	- Add some documentation
++	- Continue some test with edje, even if it's not used for now
++	- Use ewl to create the default graphic interface, even if it not for now eyes candy, it will
++	  allow us to have a first version.
++	- Begin to create the Account Properties Window (use psi as model for now).
++
+ 2005-04-20(jol):
+ 	- Add a scons support (not finished)
+ 
+
+Modified: data/themes/default/default.edc
+===================================================================
+--- data/themes/default/default.edc	2005-04-20 12:42:36 UTC (rev 33)
++++ data/themes/default/default.edc	2005-05-07 15:44:03 UTC (rev 34)
+@@ -12,8 +12,6 @@
+   image : "dnd.png" RAW;
+   image : "invisible.png" RAW;
+   image : "offline.png" RAW;
+-  
+-  
+ }
+ 
+ 
+@@ -28,11 +26,11 @@
+     
+     parts {
+ #include "parts/main.edc"
+-      
+     }
+   
+     programs {
+-#include "programs/main.edc"
++      //#include "programs/main.edc"
++    
+     }
+   }
+ }
+
+Deleted: data/themes/default/default.edj
+===================================================================
+(Binary files differ)
+
+Added: data/themes/default/img/noauth.png
+===================================================================
+(Binary files differ)
+
+
+Property changes on: data/themes/default/img/noauth.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Modified: data/themes/default/parts/main.edc
+===================================================================
+--- data/themes/default/parts/main.edc	2005-04-20 12:42:36 UTC (rev 33)
++++ data/themes/default/parts/main.edc	2005-05-07 15:44:03 UTC (rev 34)
+@@ -27,172 +27,173 @@
+ }
+ 
+ 
+-// Define Header
+-part {
+-  name, "base.header";
+-  type, RECT;
+-  mouse_events, 0;
++/* // Define Header */
++/* part { */
++/*   name, "base.header"; */
++/*   type, RECT; */
++/*   mouse_events, 0; */
+   
+-  // define the background color of the header
+-  description {
+-    state, "default" 0.0;
+-    color, 0 0 0 180;
++/*   // define the background color of the header */
++/*   description { */
++/*     state, "default" 0.0; */
++/*     color, 0 0 0 180; */
+     
+-    rel1 {
+-      relative, 0.0 0.0;
+-      offset, 0 0;
+-      to, "base.bg";
+-    }
++/*     rel1 { */
++/*       relative, 0.0 0.0; */
++/*       offset, 0 0; */
++/*       to, "base.bg"; */
++/*     } */
+     
+-    rel2 {
+-      relative, 1.0 0.0;
+-      offset, -1 10;
+-      to, "base.bg";
+-    }
+-  }
+-}
++/*     rel2 { */
++/*       relative, 1.0 0.0; */
++/*       offset, -1 10; */
++/*       to, "base.bg"; */
++/*     } */
++/*   } */
++/* } */
+ 
+ 
+-// define the footer
+-part {
+-  name, "base.footer";
+-  type, RECT;
+-  mouse_events, 0;
++/* // define the footer */
++/* part { */
++/*   name, "base.footer"; */
++/*   type, RECT; */
++/*   mouse_events, 0; */
+ 
+-  // define the background color of the header
+-  description {
+-    state, "default" 0.0;
+-    color, 0 0 0 180;
++/*   // define the background color of the header */
++/*   description { */
++/*     state, "default" 0.0; */
++/*     color, 0 0 0 180; */
+         
+-    rel1 {
+-      relative, 0.0 1.0;
+-      offset, 0 -10;
+-      to, "base.bg";
+-    }
+-    rel2 {
+-      relative, 1.0 1.0;
+-      offset, -1 -1;
+-      to, "base.bg";
+-    }
+-  }
+-}
++/*     rel1 { */
++/*       relative, 0.0 1.0; */
++/*       offset, 0 -10; */
++/*       to, "base.bg"; */
++/*     } */
++/*     rel2 { */
++/*       relative, 1.0 1.0; */
++/*       offset, -1 -1; */
++/*       to, "base.bg"; */
++/*     } */
++/*   } */
++/* } */
+ 
+ 
+ 
+-// Define the Minus clip
+-part {
+-  name : "base.minus.clip";
+-  type : RECT;
+-  mouse_events : 0;
++/* // Define the Minus clip */
++/* part { */
++/*   name : "base.minus.clip"; */
++/*   type : RECT; */
++/*   mouse_events : 0; */
+   
+-  description {
+-    state : "default" 0.0;
+-    visible : 1;
+-  }
++/*   description { */
++/*     state : "default" 0.0; */
++/*     visible : 1; */
++/*   } */
+   
+-  description {
+-    state : "close" 0.0;
+-    visible : 0;
+-  }
+-}
++/*   description { */
++/*     state : "close" 0.0; */
++/*     visible : 0; */
++/*   } */
++/* } */
+ 
+ 
+-// Define the Plus clip
+-part {
+-  name : "base.plus.clip";
+-  type : RECT;
+-  mouse_events : 0;
+-  description {
+-    state : "default" 0.0;
+-    visible : 0;
+-  }
+-  description {
+-    state : "close" 0.0;
+-    visible : 1;
+-  }
+-}
++/* // Define the Plus clip */
++/* part { */
++/*   name : "base.plus.clip"; */
++/*   type : RECT; */
++/*   mouse_events : 0; */
++/*   description { */
++/*     state : "default" 0.0; */
++/*     visible : 0; */
++/*   } */
++/*   description { */
++/*     state : "close" 0.0; */
++/*     visible : 1; */
++/*   } */
++/* } */
+ 
+ 
++/* /\************************************************\/ */
++/* /\************************************************\/ */
++/* /\*  DEFINE THE TOGGLE BUTTON BAR                *\/ */
++/* /\************************************************\/ */
++/* /\************************************************\/ */
++/* #define BASE_ICON_TB_SIZE 14 */
+ 
+-/************************************************/
+-/************************************************/
+-/*  DEFINE THE TOGGLE BUTTON BAR                */
+-/************************************************/
+-/************************************************/
+-#define BASE_ICON_TB_SIZE 14
+ 
+-// Define the Toolbar Clip
+-part {
+-  name : "base.toggle.clip";
+-  type : RECT;
+-  mouse_events : 0;
+-  description {
+-    state : "default" 0.0;
+-    visible : 0;
+-  }
+-  description {
+-    state : "close" 0.0;
+-    visible : 1;
+-  }
+-}
++/* // Define the Toolbar Clip */
++/* part { */
++/*   name : "base.toggle.clip"; */
++/*   type : RECT; */
++/*   mouse_events : 0; */
++/*   description { */
++/*     state : "default" 0.0; */
++/*     visible : 0; */
++/*   } */
++/*   description { */
++/*     state : "close" 0.0; */
++/*     visible : 1; */
++/*   } */
++/* } */
+ 
+ 
+-BUTTON_CLIPPED("base.toggle.online",
+-	       "online.png", "online.png",
+-	       BASE_ICON_TB_SIZE, BASE_ICON_TB_SIZE,
+-	       "base.bg", 0.0 0.0, 0 10,
+-	       "base.bg", 0.0 0.0, BASE_ICON_TB_SIZE (BASE_ICON_TB_SIZE+10),
+-	       "base.toggle.clip");
++/* BUTTON_CLIPPED("base.toggle.online", */
++/* 	       "online.png", "online.png", */
++/* 	       BASE_ICON_TB_SIZE, BASE_ICON_TB_SIZE, */
++/* 	       "base.bg", 0.0 0.0, 0 10, */
++/* 	       "base.bg", 0.0 0.0, BASE_ICON_TB_SIZE (BASE_ICON_TB_SIZE+10), */
++/* 	       "base.toggle.clip"); */
+ 
+-BUTTON_VLINE("base.toggle.ffc",
+-	     "ffc.png", "ffc.png",
+-	     14, 14,
+-	     "base.toggle.online",
+-	     "base.toggle.clip");
++/* BUTTON_VLINE("base.toggle.ffc", */
++/* 	     "ffc.png", "ffc.png", */
++/* 	     14, 14, */
++/* 	     "base.toggle.online", */
++/* 	     "base.toggle.clip"); */
+ 
+-BUTTON_VLINE("base.toggle.away",
+-	     "away.png", "away.png",
+-	     14, 14,
+-	     "base.toggle.ffc",
+-	     "base.toggle.clip");
++/* BUTTON_VLINE("base.toggle.away", */
++/* 	     "away.png", "away.png", */
++/* 	     14, 14, */
++/* 	     "base.toggle.ffc", */
++/* 	     "base.toggle.clip"); */
+ 
+-BUTTON_VLINE("base.toggle.xa",
+-	     "xa.png", "xa.png",
+-	     14, 14,
+-	     "base.toggle.away",
+-	     "base.toggle.clip");
++/* BUTTON_VLINE("base.toggle.xa", */
++/* 	     "xa.png", "xa.png", */
++/* 	     14, 14, */
++/* 	     "base.toggle.away", */
++/* 	     "base.toggle.clip"); */
+ 
+-BUTTON_VLINE("base.toggle.dnd",
+-	     "dnd.png", "dnd.png",
+-	     14, 14,
+-	     "base.toggle.xa",
+-	     "base.toggle.clip");
++/* BUTTON_VLINE("base.toggle.dnd", */
++/* 	     "dnd.png", "dnd.png", */
++/* 	     14, 14, */
++/* 	     "base.toggle.xa", */
++/* 	     "base.toggle.clip"); */
+ 
+-BUTTON_VLINE("base.toggle.invisible",
+-	     "invisible.png", "invisible.png",
+-	     14, 14,
+-	     "base.toggle.dnd",
+-	     "base.toggle.clip");
++/* BUTTON_VLINE("base.toggle.invisible", */
++/* 	     "invisible.png", "invisible.png", */
++/* 	     14, 14, */
++/* 	     "base.toggle.dnd", */
++/* 	     "base.toggle.clip"); */
+ 
+-BUTTON_VLINE("base.toggle.offline",
+-	     "offline.png", "invisible.png",
+-	     14, 14,
+-	     "base.toggle.invisible",
+-	     "base.toggle.clip");
++/* BUTTON_VLINE("base.toggle.offline", */
++/* 	     "offline.png", "invisible.png", */
++/* 	     14, 14, */
++/* 	     "base.toggle.invisible", */
++/* 	     "base.toggle.clip"); */
+ 
+ 
+-// Define button
+-BUTTON_CLIPPED("base.minus", 
+-	       "arrow_t.png", "arrow_t.png",
+-	       14, 14,
+-	       "base.header", 0.5 0.0, -7 -1,
+-	       "base.header", 0.5 1.0, 7 -1,
+-	       "base.minus.clip");
++/* // Define button */
++/* BUTTON_CLIPPED("base.minus",  */
++/* 	       "arrow_t.png", "arrow_t.png", */
++/* 	       14, 14, */
++/* 	       "base.header", 0.5 0.0, -7 -1, */
++/* 	       "base.header", 0.5 1.0, 7 -1, */
++/* 	       "base.minus.clip"); */
+ 
+-// Define button
+-BUTTON_CLIPPED("base.plus", 
+-	       "arrow_b.png", "arrow_b.png",
+-	       14, 14,
+-	       "base.header", 0.5 0.0, -7 -1,
+-	       "base.header", 0.5 1.0, 7 -1,
+-	       "base.plus.clip");
++/* // Define button */
++/* BUTTON_CLIPPED("base.plus",  */
++/* 	       "arrow_b.png", "arrow_b.png", */
++/* 	       14, 14, */
++/* 	       "base.header", 0.5 0.0, -7 -1, */
++/* 	       "base.header", 0.5 1.0, 7 -1, */
++/* 	       "base.plus.clip"); */
++
+
+Modified: data/themes/default/programs/main.edc
+===================================================================
+--- data/themes/default/programs/main.edc	2005-04-20 12:42:36 UTC (rev 33)
++++ data/themes/default/programs/main.edc	2005-05-07 15:44:03 UTC (rev 34)
+@@ -1,63 +1,58 @@
+-program {
+-  name :   "base.bg.close";
+-  signal : "base,close";
+-  source : "*";
+-  action : STATE_SET "close" 0.0;
+-  transition : ACCELERATE 1.0;
+-  target : "base.bg";
+-}
+ 
+-program {
+-  name :   "base.bg.open";
+-  signal : "base,open";
+-  source : "*";
+-  action : STATE_SET "default" 0.0;
+-  transition : ACCELERATE 1.0;
+-  target : "base.bg";
+-}
++/* program { */
++/*   name :   "base.bg.close"; */
++/*   signal : "base,close"; */
++/*   source : "*"; */
++/*   action : STATE_SET "close" 0.0; */
++/*   transition : ACCELERATE 1.0; */
++/*   target : "base.bg"; */
++/* } */
+ 
+-program {
+-  name :   "base.plusminus.open";
+-  signal : "base,open";
+-  source : "*";
+-  action : STATE_SET "default" 0.0;
+-  target : "base.plus.clip";
+-  target : "base.minus.clip";
+-  target : "base.toggle.clip";
+-}
++/* program { */
++/*   name :   "base.bg.open"; */
++/*   signal : "base,open"; */
++/*   source : "*"; */
++/*   action : STATE_SET "default" 0.0; */
++/*   transition : ACCELERATE 1.0; */
++/*   target : "base.bg"; */
++/* } */
+ 
+-program {
+-  name :   "base.plusminus.close";
+-  signal : "base,close";
+-  source : "*";
+-  action : STATE_SET "close" 0.5;
+-  target : "base.plus.clip";
+-  target : "base.minus.clip";
+-  target : "base.toggle.clip";
+-  //  after : "try";
+-}
++/* program { */
++/*   name :   "base.plusminus.open"; */
++/*   signal : "base,open"; */
++/*   source : "*"; */
++/*   action : STATE_SET "default" 0.0; */
++/*   target : "base.plus.clip"; */
++/*   target : "base.minus.clip"; */
++/*   target : "base.toggle.clip"; */
++/* } */
+ 
+-/*
+-program {
+-  name : "try";
+-  action : STATE_SET "close" 0.5;
+-  target : "base.toggle.clip";
+-}
+-*/
+-BUTTON_PROG("base.minus", "", "base,close");
+-BUTTON_PROG("base.plus", "", "base,open");
++/* program { */
++/*   name :   "base.plusminus.close"; */
++/*   signal : "base,close"; */
++/*   source : "*"; */
++/*   action : STATE_SET "close" 0.5; */
++/*   target : "base.plus.clip"; */
++/*   target : "base.minus.clip"; */
++/*   target : "base.toggle.clip"; */
+ 
++/* } */
+ 
+ 
+-/************************************************/
+-/************************************************/
+-/*  DEFINE THE TOGGLE BUTTON BAR                */
+-/************************************************/
+-/************************************************/
+-BUTTON_PROG("base.toggle.online", "", "");
+-BUTTON_PROG("base.toggle.away", "", "");
+-BUTTON_PROG("base.toggle.ffc", "", "");
+-BUTTON_PROG("base.toggle.xa", "", "");
+-BUTTON_PROG("base.toggle.dnd", "", "");
+-BUTTON_PROG("base.toggle.invisible", "", "");
+-BUTTON_PROG("base.toggle.offline", "", "");
++/* BUTTON_PROG("base.minus", "", "base,close"); */
++/* BUTTON_PROG("base.plus", "", "base,open"); */
++
++
++
++/* /\************************************************\/ */
++/* /\************************************************\/ */
++/* /\*  DEFINE THE TOGGLE BUTTON BAR                *\/ */
++/* /\************************************************\/ */
++/* /\************************************************\/ */
++/* BUTTON_PROG("base.toggle.online", "", ""); */
++/* BUTTON_PROG("base.toggle.away", "", ""); */
++/* BUTTON_PROG("base.toggle.ffc", "", ""); */
++/* BUTTON_PROG("base.toggle.xa", "", ""); */
++/* BUTTON_PROG("base.toggle.dnd", "", ""); */
++/* BUTTON_PROG("base.toggle.invisible", "", ""); */
++/* BUTTON_PROG("base.toggle.offline", "", ""); */
+
+Modified: doc/eim.doxygen
+===================================================================
+--- doc/eim.doxygen	2005-04-20 12:42:36 UTC (rev 33)
++++ doc/eim.doxygen	2005-05-07 15:44:03 UTC (rev 34)
+@@ -1,4 +1,4 @@
+-# Doxyfile 1.4.0
++# Doxyfile 1.4.2
+ 
+ #---------------------------------------------------------------------------
+ # Project related configuration options
+@@ -33,6 +33,7 @@
+ DETAILS_AT_TOP         = NO
+ INHERIT_DOCS           = YES
+ DISTRIBUTE_GROUP_DOC   = NO
++SEPARATE_MEMBER_PAGES  = NO
+ TAB_SIZE               = 8
+ ALIASES                = 
+ OPTIMIZE_OUTPUT_FOR_C  = YES
+@@ -42,12 +43,12 @@
+ # Build related configuration options
+ #---------------------------------------------------------------------------
+ EXTRACT_ALL            = YES
+-EXTRACT_PRIVATE        = NO
+-EXTRACT_STATIC         = NO
++EXTRACT_PRIVATE        = YES
++EXTRACT_STATIC         = YES
+ EXTRACT_LOCAL_CLASSES  = YES
+ EXTRACT_LOCAL_METHODS  = YES
+-HIDE_UNDOC_MEMBERS     = YES
+-HIDE_UNDOC_CLASSES     = YES
++HIDE_UNDOC_MEMBERS     = NO
++HIDE_UNDOC_CLASSES     = NO
+ HIDE_FRIEND_COMPOUNDS  = NO
+ HIDE_IN_BODY_DOCS      = NO
+ INTERNAL_DOCS          = NO
+@@ -80,7 +81,8 @@
+ #---------------------------------------------------------------------------
+ # configuration options related to the input files
+ #---------------------------------------------------------------------------
+-INPUT                  = ..//src/
++INPUT                  = ../src/egxp/ \
++                         ./
+ FILE_PATTERNS          = *.c \
+                          *.cc \
+                          *.cxx \
+@@ -118,7 +120,8 @@
+                          *.PHP \
+                          *.PHP3 \
+                          *.M \
+-                         *.MM
++                         *.MM \
++                         *.dxt
+ RECURSIVE              = YES
+ EXCLUDE                = 
+ EXCLUDE_SYMLINKS       = NO
+@@ -168,7 +171,7 @@
+ #---------------------------------------------------------------------------
+ # configuration options related to the LaTeX output
+ #---------------------------------------------------------------------------
+-GENERATE_LATEX         = YES
++GENERATE_LATEX         = NO
+ LATEX_OUTPUT           = latex
+ LATEX_CMD_NAME         = latex
+ MAKEINDEX_CMD_NAME     = makeindex
+@@ -242,13 +245,13 @@
+ HIDE_UNDOC_RELATIONS   = YES
+ HAVE_DOT               = YES
+ CLASS_GRAPH            = YES
+-COLLABORATION_GRAPH    = YES
++COLLABORATION_GRAPH    = NO
+ GROUP_GRAPHS           = YES
+ UML_LOOK               = NO
+ TEMPLATE_RELATIONS     = NO
+-INCLUDE_GRAPH          = YES
+-INCLUDED_BY_GRAPH      = YES
+-CALL_GRAPH             = YES
++INCLUDE_GRAPH          = NO
++INCLUDED_BY_GRAPH      = NO
++CALL_GRAPH             = NO
+ GRAPHICAL_HIERARCHY    = YES
+ DIRECTORY_GRAPH        = YES
+ DOT_IMAGE_FORMAT       = png
+
+Added: doc/mainpage.dxt
+===================================================================
+--- doc/mainpage.dxt	2005-04-20 12:42:36 UTC (rev 33)
++++ doc/mainpage.dxt	2005-05-07 15:44:03 UTC (rev 34)
+@@ -0,0 +1,45 @@
++/*! \mainpage Enlightenment Instant Messenger
++
++\par Introduction
++<a href="http://eim.berlios.de">EIM</a> is an instant messenger especially designed to extend it easily. 
++The most important stuff is the \ref egxp part. You can define
++a XML based protocol without too much effort using EGXP.
++\par
++As a proof of concept, we begin to implement the Jabber protocol using EGXP.
++Jabber is an open XML based protocol. So, aims of EIM are to implement 
++entirely the Jabber protocol and to become a Jabber development platform to test
++new functionnalities.    
++\par
++Of course, a nice graphical interface will be availabe. It will be 
++developed using the Enligthenment Foundation Libraries.
++\par
++This project is an early stage of development. Currently, there is no
++available release but you can get a development version on the 
++<a href="http://developer.berlios.de/projects/eim">project page</a>.
++
++
++\par Overview
++EGXP is the base of our project, it provides severals functionnalities:
++
++<ul>
++  <li>Define the keys words of a protocol, we mean by key words the tags and attributes names.</li>
++  <li>Associate callbacks at the begin and at the end of a specific node. A node is a tag with some attributes.</li>
++  <li>Describe your protocol.</li>
++  <li>Add new functionnalities to a protocol without modify it.</li>  
++  <li>Manage network connection.</li>
++  <li>...</li>
++</ul>
++
++\par
++Using EGXP functionnalities we begin to define the XMPP protocol 
++and the XMPP-IM extension.
++
++
++\par Requirements
++EIM is entirely based on the EFL, so if you have an installation of the <b>EFL modules</b> you should be able to compile EIM. For now we use the <a href="expat.sourceforge.net/">Expat XML Parser</a>, so you must install it.
++
++
++\par Installation
++You have two choices to compile and to install EIM. You can use the autotools or use <a href="http//www.scons.org">SCons</a>.
++
++*/
+
+Modified: src/egxp/egxp.h
+===================================================================
+--- src/egxp/egxp.h	2005-04-20 12:42:36 UTC (rev 33)
++++ src/egxp/egxp.h	2005-05-07 15:44:03 UTC (rev 34)
+@@ -33,6 +33,26 @@
+ #include "egxp_protocol_handler.h"
+ #include "egxp_connection.h"
+ 
++
++/** @addtogroup egxp Enlightenment Generic Xml Protocol
++ * 
++ * The EGXP part is the core the EIM. It allows you to describe
++ * a XML protocol, manage connections and support futurs extension of 
++ * a protocol.
++ *
++ * How does it work ?\n
++ * The first step is to define all opcodes of the protocol. This is
++ * possible using egxp_opcode* function. The next step is to describe 
++ * the protocol that you want to match. To describe a protocol a set of
++ * function are defined, these functions are egxp_nodes*. They allow you
++ * to associate callback for each node.
++ * @{
++ */
++
++
++
++
++
+ typedef struct _Egxp Egxp;
+ #define EGXP(o) ((Egxp*)o)
+ struct _Egxp {
+@@ -107,4 +127,7 @@
+  * @return the extension
+  */
+ void * egxp_extension_get_from_string (Egxp *e, char * id);
++
++
++/* @}*/
+ #endif
+
+Modified: src/gui/Makefile.am
+===================================================================
+--- src/gui/Makefile.am	2005-04-20 12:42:36 UTC (rev 33)
++++ src/gui/Makefile.am	2005-05-07 15:44:03 UTC (rev 34)
+@@ -2,10 +2,12 @@
+ 
+ pkgincludeinputdir = $(pkgincludedir)/gui
+ pkgincludeinput_HEADERS= \
+-	gui_main.h
++	gui_main.h       \
++	properties.h
+ 
+-libgui_la_SOURCES = \
+-	gui_main.c
++libgui_la_SOURCES =      \
++	gui_main.c       \
++	properties.c
+ 
+ libgui_la_CFLAGS = \
+ 	-I$(top_srcdir)/src                 \
+
+Modified: src/gui/SConscript
+===================================================================
+--- src/gui/SConscript	2005-04-20 12:42:36 UTC (rev 33)
++++ src/gui/SConscript	2005-05-07 15:44:03 UTC (rev 34)
+@@ -1,8 +1,8 @@
+ import os
+ 
+ Import ('env install_inc install_bin install_lib')
+-files = ['gui_main.c']
+-headers = ['gui_main.h']
++files = ['gui_main.c', 'properties.c']
++headers = ['gui_main.h', 'properties.h']
+ 
+ libgui = env.SharedLibrary('gui', files)
+ 
+
+Modified: src/gui/gui_main.c
+===================================================================
+--- src/gui/gui_main.c	2005-04-20 12:42:36 UTC (rev 33)
++++ src/gui/gui_main.c	2005-05-07 15:44:03 UTC (rev 34)
+@@ -28,6 +28,8 @@
+ 
+ #include <Ewl.h>
+ 
++
++#include "properties.h"
+ #include "gui_main.h"
+ 
+ 
+@@ -120,7 +122,7 @@
+   ecore_evas_geometry_get(ee, &x, &y, &w, &h);
+   evas_object_resize(background, w, h);
+   evas_object_show(background);
+-
++  
+   /* refresh the background */
+   esmart_trans_x11_freshen(background, x, y, w, h);
+   
+@@ -154,32 +156,78 @@
+ }
+ 
+ 
+-void item_cb(Ewl_Widget *w, void *event, void *data) {
+-  Ewl_Widget * imenubox;
+-  Ewl_Widget * item;
++void item_cb(Ewl_Widget *w, void *ev_data, void *data) {
++  Ewl_Widget *menu = data;
++  Ewl_Widget *parent = menu->parent;
++  Ewl_Event_Mouse_Down *ev = ev_data;
+   
+-  /*  imenubox = ewl_vbox_new ();
+-  ewl_object_fill_policy_set (EWL_OBJECT(imenubox), EWL_FLAG_FILL_FILL);
+-  ewl_widget_show (imenubox);
+-  */
+-  imenubox = ewl_menu_new ("", "Test");
++  if (ev->button == 3) {
++    printf("Menu callback %d, %d\n", ev->x, ev->y);
++    ewl_object_position_request(EWL_OBJECT(menu), ev->x, ev->y - EWL_OBJECT(parent)->current.h);
++    ewl_widget_show (menu);
++    ewl_callback_call(menu, EWL_CALLBACK_SELECT);
++  }
++}
++
++
++
++Ewl_Widget * create_menu (Ewl_Widget * parent) {
++  Ewl_Widget *menu;
++  Ewl_Widget *item;
+   
++  menu = ewl_menu_new(NULL, NULL);
++  ewl_container_child_append(EWL_CONTAINER(parent), menu);
+   
+-  item = ewl_menu_item_new ("", "titi");
+-  ewl_container_child_append (EWL_CONTAINER (imenubox), item);
+-  ewl_widget_show (item);
++  item = ewl_menu_item_new(NULL, "Action 1");
++  ewl_container_child_append(EWL_CONTAINER(menu), item);
++  ewl_widget_show(item);
++  
++  item = ewl_menu_item_new(NULL, "Action 2");
++  ewl_container_child_append(EWL_CONTAINER(menu), item);
++  ewl_widget_show(item);
+ 
+-  // ewl_container_child_append (EWL_CONTAINER (w), imenubox);
++  return menu;
++}
+ 
+-  //  ewl_widget_show (EWL_MENU(imenubox)->base.popup);
+ 
++/**
++ * Create an item for the tree with an image. 
++ */
++Ewl_Widget * create_tree_item (Ewl_Widget * tree, char * img_path, char * item_text, void * user_data) {
+ 
+-  ewl_menu_configure_cb (imenubox, event, data);
+-  ewl_menu_expand_cb (imenubox, event, data);
+-  ewl_widget_show (imenubox);
++  Ewl_Widget * hbox;
++  Ewl_Widget *img;
++  Ewl_Widget * text;
++
++  /* create the horizontal box that should contains image + text, then add the clicked callback */
++  hbox = ewl_hbox_new (); 
++  ewl_object_fill_policy_set(EWL_OBJECT(hbox), EWL_FLAG_FILL_ALL);
++  ewl_callback_append(hbox, EWL_CALLBACK_MOUSE_DOWN, item_cb, user_data);
++  ewl_widget_show (hbox);
++  
++  /* create the image and add it to the hbox */
++  if (img_path != NULL) {
++    img = ewl_image_new(img_path, NULL);
++    ewl_object_alignment_set(EWL_OBJECT(img), EWL_FLAG_ALIGN_LEFT);
++    ewl_object_fill_policy_set(EWL_OBJECT(img), EWL_FLAG_FILL_HSHRINK);
++    ewl_container_child_append (EWL_CONTAINER (hbox), img);
++    ewl_widget_show(img);
++  }
++  
++  /* create the text and add it to the hbox */
++  text = ewl_text_new(item_text);
++  ewl_container_child_append (EWL_CONTAINER (hbox), text);
++  ewl_widget_show(text);
++  
++  
++  /* append the item to the tree */
++  ewl_tree_row_add (EWL_TREE(tree), NULL, &hbox);
++  
++  return hbox;
+ }
+ 
+ 
++
+ int gui_main_init2 (char * winname, char * theme) {
+   Ewl_Widget     *main_win = NULL;
+   Ewl_Widget     *tree = NULL;
+@@ -187,55 +235,48 @@
+ 
+   Ewl_Widget     * item = NULL;
+   Ewl_Widget     * box_item = NULL;
+-
+-  /* create the main windows */
+-  main_win = ewl_window_new();
+-  /* define size */
+-  ewl_object_size_request(EWL_OBJECT(main_win), 80, 300);
+-  ewl_object_fill_policy_set(EWL_OBJECT(main_win), EWL_FLAG_FILL_ALL);
+-  /* define title */
+-  ewl_window_title_set(EWL_WINDOW(main_win),
+-		       "The Enlightenment Instant Messenger");
++  Ewl_Widget     * menu;
+   
+-  ewl_callback_append(main_win, EWL_CALLBACK_DELETE_WINDOW, _gui_main_destroy_cb, NULL);
+-  ewl_window_name_set(EWL_WINDOW(main_win), "Enlightenment Instant Messenger");
+-  ewl_window_class_set(EWL_WINDOW(main_win), "Enlightenment Instant Messenger");
+-  ewl_widget_show(main_win);
+-
+-
+-  /* create the container */
+-  box = ewl_vbox_new();
+-  ewl_container_child_append(EWL_CONTAINER(main_win), box);
+-  ewl_object_fill_policy_set(EWL_OBJECT(box), EWL_FLAG_FILL_ALL);
+-  ewl_widget_show(box);
++/*   /\* create the main windows *\/ */
++/*   main_win = ewl_window_new(); */
+   
++/*   /\* define size *\/ */
++/*   ewl_object_size_request(EWL_OBJECT(main_win), 80, 300); */
++/*   ewl_object_fill_policy_set(EWL_OBJECT(main_win), EWL_FLAG_FILL_ALL); */
+   
+-  /* create the tree root object */
+-  tree = ewl_tree_new (1); 
+-  ewl_container_child_append (EWL_CONTAINER(box), tree);
+-  ewl_widget_show(tree);
++/*   /\* define title *\/ */
++/*   ewl_window_title_set(EWL_WINDOW(main_win), */
++/* 		       "The Enlightenment Instant Messenger"); */
++  
++/*   ewl_callback_append(main_win, EWL_CALLBACK_DELETE_WINDOW, _gui_main_destroy_cb, NULL); */
++/*   ewl_window_name_set(EWL_WINDOW(main_win), "Enlightenment Instant Messenger"); */
++/*   ewl_window_class_set(EWL_WINDOW(main_win), "Enlightenment Instant Messenger"); */
++/*   ewl_widget_show(main_win); */
+ 
+   
+-  /* add some test */
+-  Ewl_Widget * hbox = ewl_hbox_new (); 
+-  ewl_object_fill_policy_set(EWL_OBJECT(box), EWL_FLAG_FILL_ALL);
+-  ewl_widget_show (hbox);
+-  ewl_callback_append(hbox, EWL_CALLBACK_CLICKED, item_cb, NULL);
++/*   /\* create the container *\/ */
++/*   box = ewl_vbox_new(); */
++/*   ewl_container_child_append(EWL_CONTAINER(main_win), box); */
++/*   ewl_object_fill_policy_set(EWL_OBJECT(box), EWL_FLAG_FILL_ALL); */
++/*   ewl_widget_show(box); */
+   
+   
+-  /* image */
+-  Ewl_Widget *img = ewl_image_new("/usr/share/psi/iconsets/roster/default/online.png", NULL);
+-  ewl_object_alignment_set(EWL_OBJECT(img), EWL_FLAG_ALIGN_LEFT);
+-  ewl_object_fill_policy_set(EWL_OBJECT(img), EWL_FLAG_FILL_HSHRINK);
+-  ewl_container_child_append (EWL_CONTAINER (hbox), img);
+-  ewl_widget_show(img);
++/*   /\* create the tree root object *\/ */
++/*   tree = ewl_tree_new (1);  */
++/*   ewl_container_child_append (EWL_CONTAINER(box), tree); */
++/*   ewl_widget_show(tree); */
++
++/*   /\* create the menu *\/ */
++/*   menu = create_menu (main_win); */
+   
+-  /* text */
+-  Ewl_Widget * text = ewl_text_new("text");
+-  ewl_container_child_append (EWL_CONTAINER (hbox), text);
+-  ewl_widget_show(text);
++/*   /\* Add an item *\/ */
++/*   create_tree_item (tree, NULL, "entry 1", menu); */
++/*   create_tree_item (tree, NULL, "entry 2", menu); */
++/*   create_tree_item (tree, NULL, "entry 3", menu); */
++
++  /* test properties windows */
++  main_win = create_properties_window ();
++  ewl_widget_show (main_win);
+   
+-  ewl_tree_row_add (EWL_TREE(tree), NULL, &hbox);
+-  
+   return 0;
+ }
+
+Added: src/gui/properties.c
+===================================================================
+--- src/gui/properties.c	2005-04-20 12:42:36 UTC (rev 33)
++++ src/gui/properties.c	2005-05-07 15:44:03 UTC (rev 34)
+@@ -0,0 +1,195 @@
++#include <assert.h>
++#include "properties.h"
++
++
++/**
++ * Create the Account page and add it to the notebook
++ *  - jabber id
++ *  - password
++ *  - resource + priority
++ */
++void _create_account_property_page (Ewl_Widget * notebook) {
++  assert (notebook);
++  
++  Ewl_Widget * tab;
++  Ewl_Widget * vbox;
++  Ewl_Widget * hbox;
++  Ewl_Widget * text;
++  Ewl_Widget * entry;
++
++  /* create the tab entry */
++  tab = ewl_text_new ("Account");
++  ewl_widget_show (tab);
++
++  /* create the vbox that will contain all widget of the page */
++  vbox = ewl_vbox_new ();
++  ewl_widget_show (vbox);
++  
++  /* add jabber id */
++  hbox = ewl_hbox_new ();
++  ewl_widget_show (hbox);
++  ewl_container_child_append (EWL_CONTAINER(vbox), hbox);
++  text = ewl_text_new ("Jabber ID");
++  ewl_container_child_append (EWL_CONTAINER (hbox), text);
++  ewl_widget_show (text);
++  entry = ewl_entry_new ("");
++  ewl_container_child_append (EWL_CONTAINER (hbox), entry);
++  ewl_widget_show (entry);
++
++  /* password */
++  hbox = ewl_hbox_new ();
++  ewl_widget_show (hbox);
++  ewl_container_child_append (EWL_CONTAINER(vbox), hbox);
++  text = ewl_text_new ("Password");
++  ewl_container_child_append (EWL_CONTAINER (hbox), text);
++  ewl_widget_show (text);
++  entry = ewl_password_new ("");
++  //ewl_callback_append(entry, EWL_CALLBACK_VALUE_CHANGED, passwd_cb, NULL);
++  ewl_container_child_append (EWL_CONTAINER (hbox), entry);
++  ewl_widget_show (entry);
++  
++  
++  /* resource + priority */
++
++  
++  /* add the tab and vbox to the notebook */
++  ewl_notebook_page_append (EWL_NOTEBOOK(notebook), tab, vbox);
++}
++
++
++
++/**
++ * Create the connection property page and add it to the notebook
++ * - Use SSL encryption
++ * - Allow Plaintext Login
++ * - Send "Keep-Alive" packets (for NAT timeouts)
++ * - Manually specify Server Host/Port
++ */
++void _create_connection_property_page (Ewl_Widget * notebook) {
++  assert (notebook);
++  
++  Ewl_Widget * tab;
++  Ewl_Widget * vbox;
++  Ewl_Widget * hbox;
++  Ewl_Widget * text;
++  Ewl_Widget * entry;
++
++  /* create the tab entry */
++  tab = ewl_text_new ("Connection");
++  ewl_widget_show (tab);
++
++  /* create the vbox that will contain all widget of the page */
++  vbox = ewl_vbox_new ();
++  ewl_widget_show (vbox);
++  
++
++  /* add the tab and vbox to the notebook */
++  ewl_notebook_page_append (EWL_NOTEBOOK(notebook), tab, vbox);
++}
++
++
++
++/**
++ * Create the details property page and add it to the notebook
++ * - Edit Personal Information
++ * - Allows to change password on the server side
++ */
++void _create_details_property_page (Ewl_Widget * notebook) {
++  assert (notebook);
++  
++  Ewl_Widget * tab;
++  Ewl_Widget * vbox;
++  Ewl_Widget * hbox;
++  Ewl_Widget * text;
++  Ewl_Widget * entry;
++
++  /* create the tab entry */
++  tab = ewl_text_new ("Details");
++  ewl_widget_show (tab);
++
++  /* create the vbox that will contain all widget of the page */
++  vbox = ewl_vbox_new ();
++  ewl_widget_show (vbox);
++  
++
++  /* add the tab and vbox to the notebook */
++  ewl_notebook_page_append (EWL_NOTEBOOK(notebook), tab, vbox);
++}
++
++/**
++ * Create the preferences property page and add it to the notebook
++ * - Automatically connect on startup
++ * - Automatically reconnect if disconnected
++ * - Log message history
++ * - Ignore SSL warnings
++ */
++void _create_preferences_property_page (Ewl_Widget * notebook) {
++  assert (notebook);
++  
++  Ewl_Widget * tab;
++  Ewl_Widget * vbox;
++  Ewl_Widget * hbox;
++  Ewl_Widget * text;
++  Ewl_Widget * entry;
++
++  /* create the tab entry */
++  tab = ewl_text_new ("Preferences");
++  ewl_widget_show (tab);
++
++  /* create the vbox that will contain all widget of the page */
++  vbox = ewl_vbox_new ();
++  ewl_widget_show (vbox);
++  
++
++  /* add the tab and vbox to the notebook */
++  ewl_notebook_page_append (EWL_NOTEBOOK(notebook), tab, vbox);
++}
++
++
++
++
++
++
++
++/**
++ * This windows should contains all properties
++ * @return the newly created windows
++ */
++Ewl_Widget * create_properties_window () {
++  Ewl_Widget * win;
++  Ewl_Widget * notebook;
++  Ewl_Widget * vbox;
++
++  /* create the new window */
++  win = ewl_window_new ();
++  ewl_object_size_request(EWL_OBJECT(win), 300, 80); 
++  ewl_object_fill_policy_set(EWL_OBJECT(win), EWL_FLAG_FILL_ALL);
++  
++  ewl_window_title_set (EWL_WINDOW(win), "EIM Properties");
++  ewl_window_name_set (EWL_WINDOW(win), "EIM Properties");
++  ewl_window_class_set (EWL_WINDOW(win), "EIM Properties");
++  // should insert the CALLBACK DELETE FUNCTION
++
++  /* create the vbox which contains the notebook */
++  vbox = ewl_vbox_new ();
++  ewl_object_fill_policy_set (EWL_OBJECT(vbox), EWL_FLAG_FILL_SHRINK);
++  ewl_container_child_append (EWL_CONTAINER (win), vbox);
++  ewl_widget_show (vbox);
++
++  /* create the note book */
++  notebook = ewl_notebook_new ();
++  ewl_notebook_tabs_position_set (EWL_NOTEBOOK(notebook), EWL_POSITION_TOP);
++  ewl_widget_appearance_set (notebook, "window");
++  
++  /* create the Account Page */
++  _create_account_property_page (notebook);
++  _create_connection_property_page (notebook);
++  _create_details_property_page (notebook);
++  _create_preferences_property_page (notebook);
++
++  /* after added pages inside the notebook, we add it to the window */
++  ewl_container_child_append (EWL_CONTAINER(vbox), notebook);
++  ewl_widget_show (notebook);
++  
++  return win;
++}
+
+Added: src/gui/properties.h
+===================================================================
+--- src/gui/properties.h	2005-04-20 12:42:36 UTC (rev 33)
++++ src/gui/properties.h	2005-05-07 15:44:03 UTC (rev 34)
+@@ -0,0 +1,13 @@
++#ifndef gui_properties_header_
++#define gui_properties_header_
++
++#include "Ewl.h"
++
++/**
++ * This windows should contains all properties
++ */
++Ewl_Widget * create_properties_window ();
++
++
++
++#endif
+
+
+
+From jol at sheep.berlios.de  Sun May 29 15:03:04 2005
+From: jol at sheep.berlios.de (Joël Vennin at BerliOS)
+Date: Sun, 29 May 2005 15:03:04 +0200
+Subject: [Eim-svn] r35 - / src src/gui
+Message-ID: <200505291303.j4TD340Q022967@sheep.berlios.de>
+
+Author: jol
+Date: 2005-05-29 15:02:58 +0200 (Sun, 29 May 2005)
+New Revision: 35
+
+Added:
+   src/conf.c
+   src/conf.h
+Modified:
+   ChangeLog
+   src/Makefile.am
+   src/eim.c
+   src/gui/gui_main.c
+   src/gui/properties.c
+   src/gui/properties.h
+Log:
+- begin the config stuff
+- fix compilation error
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-05-07 15:44:03 UTC (rev 34)
++++ ChangeLog	2005-05-29 13:02:58 UTC (rev 35)
+@@ -1,3 +1,7 @@
++2005-05-30(jol):
++	- begin the config stuff
++	- fix compilation error
++	
+ 2005-05-07(jol):
+ 	- Add some documentation
+ 	- Continue some test with edje, even if it's not used for now
+
+Modified: src/Makefile.am
+===================================================================
+--- src/Makefile.am	2005-05-07 15:44:03 UTC (rev 34)
++++ src/Makefile.am	2005-05-29 13:02:58 UTC (rev 35)
+@@ -8,7 +8,8 @@
+ bin_PROGRAMS = eim
+ 
+ eim_SOURCES = \
+-	eim.c
++	eim.c  \
++	conf.c
+ 
+ eim_CFLAGS = \
+ 	-I$(top_srcdir)/src           \
+
+Added: src/conf.c
+===================================================================
+--- src/conf.c	2005-05-07 15:44:03 UTC (rev 34)
++++ src/conf.c	2005-05-29 13:02:58 UTC (rev 35)
+@@ -0,0 +1,37 @@
++#include <assert.h>
++#include "Ecore_Config.h"
++#include "conf.h"
++
++
++/**
++ * Initialize the config.
++ * @param eg: the Egxp structure
++ */
++int eim_config_init (Egxp * eg) {
++  assert (eg);
++
++  if (ecore_config_init ("eim") == ECORE_CONFIG_ERR_FAIL) {
++    printf("WARNING: config file not available\n");
++  }
++  
++  // load default config
++
++  // save in order to have config object
++  eim_config_save ();
++
++  return 1;
++}
++
++
++/**
++ * Save the configuration
++ */
++void eim_config_save () {
++  ecore_config_save ();
++}
++
++
++void eim_config_shutdown () {
++  eim_config_save ();
++  ecore_config_shutdown ();
++}
+
+Added: src/conf.h
+===================================================================
+--- src/conf.h	2005-05-07 15:44:03 UTC (rev 34)
++++ src/conf.h	2005-05-29 13:02:58 UTC (rev 35)
+@@ -0,0 +1,14 @@
++#ifndef conf_header_
++#define conf_header_
++
++#include "egxp/egxp.h"
++
++
++int eim_config_init (Egxp * eg);
++
++
++void eim_config_save ();
++
++void eim_config_shutdown ();
++
++#endif
+
+Modified: src/eim.c
+===================================================================
+--- src/eim.c	2005-05-07 15:44:03 UTC (rev 34)
++++ src/eim.c	2005-05-29 13:02:58 UTC (rev 35)
+@@ -25,7 +25,9 @@
+ 
+ #include <Ewl.h>
+ 
++#include "egxp/egxp.h"
+ #include "gui/gui_main.h"
++#include "conf.h"
+ 
+ 
+ static int eim_handler_signal_exit (void *data, int ev_type, void *ev) {
+@@ -82,24 +84,38 @@
+   
+   
+   /* initialize the core */
+-  ecore_init ();
++  if (!ecore_init()) {
++    printf("ERROR: can't initialize Ecore.\n");
++    return -1;
++  }
+   if (!ewl_init(&argc, argv)) {
+-    printf("Unable to init ewl\n");
++    printf("ERROR: can't initialize Ewl\n");
+     return -1;
+   }
+ 
+   ecore_event_handler_add (ECORE_EVENT_SIGNAL_EXIT, eim_handler_signal_exit, NULL);
+-  if (!ecore_con_init ()) return -1;
+-  
++
++  if (!ecore_con_init ()){
++    printf("ERROR: can't initialize Ecore Connection\n");
++    return -1;
++  }
++
++  /* define the args */
+   ecore_app_args_set (argc, (const char **) argv);
+ 
++  Egxp * eg = egxp_new ();
++
++  eim_config_init (eg);
++  
++
+   if (gui_main_init2 ("eim", theme_file)) return -1;
+   
+   /* process the main loop */
+   ecore_main_loop_begin ();
++  printf("Here\n");
+ 
+-
+   /* shutdown all ecore service */
++  eim_config_shutdown ();
+   ewl_shutdown ();
+   ecore_shutdown ();
+   
+
+Modified: src/gui/gui_main.c
+===================================================================
+--- src/gui/gui_main.c	2005-05-07 15:44:03 UTC (rev 34)
++++ src/gui/gui_main.c	2005-05-29 13:02:58 UTC (rev 35)
+@@ -237,46 +237,52 @@
+   Ewl_Widget     * box_item = NULL;
+   Ewl_Widget     * menu;
+   
+-/*   /\* create the main windows *\/ */
+-/*   main_win = ewl_window_new(); */
++
+   
+-/*   /\* define size *\/ */
+-/*   ewl_object_size_request(EWL_OBJECT(main_win), 80, 300); */
+-/*   ewl_object_fill_policy_set(EWL_OBJECT(main_win), EWL_FLAG_FILL_ALL); */
++
++
++
++
++  /* create the main windows */
++  main_win = ewl_window_new();
+   
+-/*   /\* define title *\/ */
+-/*   ewl_window_title_set(EWL_WINDOW(main_win), */
+-/* 		       "The Enlightenment Instant Messenger"); */
++  /* define size */
++  ewl_object_size_request(EWL_OBJECT(main_win), 80, 300);
++  ewl_object_fill_policy_set(EWL_OBJECT(main_win), EWL_FLAG_FILL_ALL);
+   
+-/*   ewl_callback_append(main_win, EWL_CALLBACK_DELETE_WINDOW, _gui_main_destroy_cb, NULL); */
+-/*   ewl_window_name_set(EWL_WINDOW(main_win), "Enlightenment Instant Messenger"); */
+-/*   ewl_window_class_set(EWL_WINDOW(main_win), "Enlightenment Instant Messenger"); */
+-/*   ewl_widget_show(main_win); */
++  /* define title */
++  ewl_window_title_set(EWL_WINDOW(main_win),
++		       "The Enlightenment Instant Messenger");
++  
++  ewl_callback_append(main_win, EWL_CALLBACK_DELETE_WINDOW, _gui_main_destroy_cb, NULL);
++  ewl_window_name_set(EWL_WINDOW(main_win), "Enlightenment Instant Messenger");
++  ewl_window_class_set(EWL_WINDOW(main_win), "Enlightenment Instant Messenger");
++  ewl_widget_show(main_win);
+ 
+   
+-/*   /\* create the container *\/ */
+-/*   box = ewl_vbox_new(); */
+-/*   ewl_container_child_append(EWL_CONTAINER(main_win), box); */
+-/*   ewl_object_fill_policy_set(EWL_OBJECT(box), EWL_FLAG_FILL_ALL); */
+-/*   ewl_widget_show(box); */
++  /* create the container */
++  box = ewl_vbox_new();
++  ewl_container_child_append(EWL_CONTAINER(main_win), box);
++  ewl_object_fill_policy_set(EWL_OBJECT(box), EWL_FLAG_FILL_ALL);
++  ewl_widget_show(box);
+   
+   
+-/*   /\* create the tree root object *\/ */
+-/*   tree = ewl_tree_new (1);  */
+-/*   ewl_container_child_append (EWL_CONTAINER(box), tree); */
+-/*   ewl_widget_show(tree); */
++  /* create the tree root object */
++  tree = ewl_tree_new (1);
++  ewl_container_child_append (EWL_CONTAINER(box), tree);
++  ewl_widget_show(tree);
+ 
+-/*   /\* create the menu *\/ */
+-/*   menu = create_menu (main_win); */
++  /* create the menu */
++  menu = create_menu (main_win);
+   
+-/*   /\* Add an item *\/ */
+-/*   create_tree_item (tree, NULL, "entry 1", menu); */
+-/*   create_tree_item (tree, NULL, "entry 2", menu); */
+-/*   create_tree_item (tree, NULL, "entry 3", menu); */
++  /* Add an item */
++  create_tree_item (tree, NULL, "entry 1", menu);
++  create_tree_item (tree, NULL, "entry 2", menu);
++  create_tree_item (tree, NULL, "entry 3", menu);
+ 
+   /* test properties windows */
+-  main_win = create_properties_window ();
+-  ewl_widget_show (main_win);
++  /*  main_win = create_properties_dialog (NULL);
++      ewl_widget_show (main_win);****/
+   
+   return 0;
+ }
+
+Modified: src/gui/properties.c
+===================================================================
+--- src/gui/properties.c	2005-05-07 15:44:03 UTC (rev 34)
++++ src/gui/properties.c	2005-05-29 13:02:58 UTC (rev 35)
+@@ -1,14 +1,57 @@
+ #include <assert.h>
++#include <string.h>
+ #include "properties.h"
+ 
+ 
+ /**
++ * Define the properties for the Properties page.
++ * It contains all parameters available inside the Egxp and its extension
++ * We use this structure has temporary variable.
++ */
++typedef struct _Properties Properties;
++#define PROPERTIES(o) ((Properties*)o)
++struct _Properties {
++  /* account */
++  char * jabber_id;
++  char * password;
++  char * resource;
++  int priority;
++
++  /* connection */
++  int use_ssl;
++  int allow_plaintext;
++  int send_keep_alive;
++  // manual server host port
++
++  /* details */
++
++  /* preferences */
++  int auto_connect;
++  int auto_reconnect;
++  int log_history;
++  int ignore_ssl_warning;
++};
++
++
++
++Properties * _properties_new () {
++  Properties * tmp = PROPERTIES(malloc (sizeof(Properties)));
++  memset (tmp, 0, sizeof (Properties));
++
++  return tmp;
++}
++
++
++
++
++
++/**
+  * Create the Account page and add it to the notebook
+  *  - jabber id
+  *  - password
+  *  - resource + priority
+  */
+-void _create_account_property_page (Ewl_Widget * notebook) {
++void _create_account_property_page (Ewl_Widget * notebook, Egxp * eg) {
+   assert (notebook);
+   
+   Ewl_Widget * tab;
+@@ -65,7 +108,7 @@
+  * - Send "Keep-Alive" packets (for NAT timeouts)
+  * - Manually specify Server Host/Port
+  */
+-void _create_connection_property_page (Ewl_Widget * notebook) {
++void _create_connection_property_page (Ewl_Widget * notebook, Egxp *eg) {
+   assert (notebook);
+   
+   Ewl_Widget * tab;
+@@ -73,6 +116,7 @@
+   Ewl_Widget * hbox;
+   Ewl_Widget * text;
+   Ewl_Widget * entry;
++  Ewl_Widget * misc;
+ 
+   /* create the tab entry */
+   tab = ewl_text_new ("Connection");
+@@ -82,7 +126,22 @@
+   vbox = ewl_vbox_new ();
+   ewl_widget_show (vbox);
+   
++  /* use SSL encryption */
++  misc = ewl_checkbutton_new ("Use SSL encryption");
++  ewl_container_child_append (EWL_CONTAINER(vbox), misc);
++  ewl_widget_show(misc);
+ 
++  /* allow plain text login */
++  misc = ewl_checkbutton_new ("Allow plain text login");
++  ewl_container_child_append (EWL_CONTAINER(vbox), misc);
++  ewl_widget_show(misc);
++
++  /* Send "keep alive" packets (for NAT timeouts) */
++  misc = ewl_checkbutton_new ("Send \"keep alive\" packets (for NAT timeouts)");
++  ewl_container_child_append (EWL_CONTAINER(vbox), misc);
++  ewl_widget_show(misc);
++  
++
+   /* add the tab and vbox to the notebook */
+   ewl_notebook_page_append (EWL_NOTEBOOK(notebook), tab, vbox);
+ }
+@@ -94,7 +153,7 @@
+  * - Edit Personal Information
+  * - Allows to change password on the server side
+  */
+-void _create_details_property_page (Ewl_Widget * notebook) {
++void _create_details_property_page (Ewl_Widget * notebook, Egxp *eg) {
+   assert (notebook);
+   
+   Ewl_Widget * tab;
+@@ -116,6 +175,8 @@
+   ewl_notebook_page_append (EWL_NOTEBOOK(notebook), tab, vbox);
+ }
+ 
++
++
+ /**
+  * Create the preferences property page and add it to the notebook
+  * - Automatically connect on startup
+@@ -123,7 +184,7 @@
+  * - Log message history
+  * - Ignore SSL warnings
+  */
+-void _create_preferences_property_page (Ewl_Widget * notebook) {
++void _create_preferences_property_page (Ewl_Widget * notebook, Egxp * eg) {
+   assert (notebook);
+   
+   Ewl_Widget * tab;
+@@ -131,6 +192,7 @@
+   Ewl_Widget * hbox;
+   Ewl_Widget * text;
+   Ewl_Widget * entry;
++  Ewl_Widget * misc;
+ 
+   /* create the tab entry */
+   tab = ewl_text_new ("Preferences");
+@@ -140,7 +202,26 @@
+   vbox = ewl_vbox_new ();
+   ewl_widget_show (vbox);
+   
++  /* Automatically connect on startup */
++  misc = ewl_checkbutton_new ("Automatically connect on startup");
++  ewl_container_child_append (EWL_CONTAINER(vbox), misc);
++  ewl_widget_show(misc);
+ 
++  /* Automatically reconnect if disconnected */
++  misc = ewl_checkbutton_new ("Automatically reconnect if disconnected");
++  ewl_container_child_append (EWL_CONTAINER(vbox), misc);
++  ewl_widget_show(misc);
++
++  /* Log message history */
++  misc = ewl_checkbutton_new ("Log message history");
++  ewl_container_child_append (EWL_CONTAINER(vbox), misc);
++  ewl_widget_show(misc);
++
++  /* Ignore SSL warnings */
++  misc = ewl_checkbutton_new ("Ignore SSL warnings");
++  ewl_container_child_append (EWL_CONTAINER(vbox), misc);
++  ewl_widget_show(misc);
++  
+   /* add the tab and vbox to the notebook */
+   ewl_notebook_page_append (EWL_NOTEBOOK(notebook), tab, vbox);
+ }
+@@ -155,25 +236,33 @@
+  * This windows should contains all properties
+  * @return the newly created windows
+  */
+-Ewl_Widget * create_properties_window () {
+-  Ewl_Widget * win;
++Ewl_Widget * create_properties_dialog (Egxp * eg) {
++  Ewl_Widget * dialog;
+   Ewl_Widget * notebook;
+   Ewl_Widget * vbox;
++  Ewl_Widget * button;
+ 
+-  /* create the new window */
+-  win = ewl_window_new ();
+-  ewl_object_size_request(EWL_OBJECT(win), 300, 80); 
+-  ewl_object_fill_policy_set(EWL_OBJECT(win), EWL_FLAG_FILL_ALL);
++  /* create the new dialog */
++  dialog = ewl_dialog_new(EWL_POSITION_BOTTOM);
++  ewl_dialog_has_separator_set(EWL_DIALOG(dialog), 1);
++
++  /* create the ok button */
++  button = ewl_dialog_button_add(EWL_DIALOG(dialog),"OK", EWL_RESPONSE_OK);
++  ewl_container_child_append(EWL_CONTAINER(dialog), button);
++  //ewl_callback_append(o, EWL_CALLBACK_CLICKED, dialog_clicked_cb, dialog);
++  ewl_widget_show(button);
+   
+-  ewl_window_title_set (EWL_WINDOW(win), "EIM Properties");
+-  ewl_window_name_set (EWL_WINDOW(win), "EIM Properties");
+-  ewl_window_class_set (EWL_WINDOW(win), "EIM Properties");
+-  // should insert the CALLBACK DELETE FUNCTION
++  
++  /* create the cancel button */
++  button = ewl_dialog_button_left_add(EWL_DIALOG(dialog),"Cancel", EWL_RESPONSE_CANCEL);
++  ewl_container_child_append(EWL_CONTAINER(dialog), button);
++  //ewl_callback_append(o, EWL_CALLBACK_CLICKED, dialog_clicked_cb, dialog);
++  ewl_widget_show(button);
++  
+ 
+   /* create the vbox which contains the notebook */
+   vbox = ewl_vbox_new ();
+   ewl_object_fill_policy_set (EWL_OBJECT(vbox), EWL_FLAG_FILL_SHRINK);
+-  ewl_container_child_append (EWL_CONTAINER (win), vbox);
+   ewl_widget_show (vbox);
+ 
+   /* create the note book */
+@@ -182,14 +271,17 @@
+   ewl_widget_appearance_set (notebook, "window");
+   
+   /* create the Account Page */
+-  _create_account_property_page (notebook);
+-  _create_connection_property_page (notebook);
+-  _create_details_property_page (notebook);
+-  _create_preferences_property_page (notebook);
+-
+-  /* after added pages inside the notebook, we add it to the window */
++  _create_account_property_page (notebook, eg);
++  _create_connection_property_page (notebook, eg);
++  _create_details_property_page (notebook, eg);
++  _create_preferences_property_page (notebook, eg);
++  
++  /* after added pages inside the notebook, we add it to the dialog */
+   ewl_container_child_append (EWL_CONTAINER(vbox), notebook);
+   ewl_widget_show (notebook);
+   
+-  return win;
++  ewl_dialog_widget_add(EWL_DIALOG(dialog), vbox);
++  ewl_object_alignment_set(EWL_OBJECT(dialog), EWL_FLAG_ALIGN_CENTER);
++  
++  return dialog;
+ }
+
+Modified: src/gui/properties.h
+===================================================================
+--- src/gui/properties.h	2005-05-07 15:44:03 UTC (rev 34)
++++ src/gui/properties.h	2005-05-29 13:02:58 UTC (rev 35)
+@@ -3,10 +3,12 @@
+ 
+ #include "Ewl.h"
+ 
++#include "egxp/egxp.h"
++
+ /**
+  * This windows should contains all properties
+  */
+-Ewl_Widget * create_properties_window ();
++Ewl_Widget * create_properties_dialog (Egxp * eg);
+ 
+ 
+ 
+
+
+

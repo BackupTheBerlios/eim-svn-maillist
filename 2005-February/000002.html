@@ -1,0 +1,877 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r6 - / src/egxp
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-February/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r6%20-%20/%20src/egxp&In-Reply-To=%3C200502072252.j17MqGDL006831%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000001.html">
+   <LINK REL="Next"  HREF="000003.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r6 - / src/egxp</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r6%20-%20/%20src/egxp&In-Reply-To=%3C200502072252.j17MqGDL006831%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r6 - / src/egxp">jol at sheep.berlios.de
+       </A><BR>
+    <I>Mon Feb  7 23:52:16 CET 2005</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000001.html">[Eim-svn] r5 - src/egxp
+</A></li>
+        <LI>Next message: <A HREF="000003.html">[Eim-svn] r7 - / src/egxp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2">[ date ]</a>
+              <a href="thread.html#2">[ thread ]</a>
+              <a href="subject.html#2">[ subject ]</a>
+              <a href="author.html#2">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-02-07 23:52:12 +0100 (Mon, 07 Feb 2005)
+New Revision: 6
+
+Added:
+   src/egxp/egxp_protocol_handler.c
+   src/egxp/egxp_protocol_handler.h
+Modified:
+   ChangeLog
+   TODO
+   configure.ac
+   src/egxp/Makefile.am
+   src/egxp/egxp.c
+   src/egxp/egxp.h
+   src/egxp/egxp_child_node.c
+   src/egxp/egxp_child_node.h
+   src/egxp/egxp_condition.c
+   src/egxp/egxp_condition.h
+   src/egxp/egxp_conditional_node.c
+   src/egxp/egxp_conditional_node.h
+   src/egxp/egxp_message.c
+   src/egxp/egxp_message.h
+   src/egxp/egxp_node.c
+   src/egxp/egxp_node.h
+   src/egxp/egxp_node_struct.h
+   src/egxp/egxp_opcode.c
+   src/egxp/egxp_opcode.h
+Log:
+- add Egxp_ProtocolHandler
+- configure.ac add depends on expat
+- add the GPL in each source file
+	
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-02-07 20:18:23 UTC (rev 5)
++++ ChangeLog	2005-02-07 22:52:12 UTC (rev 6)
+@@ -2,6 +2,9 @@
+ 	- do not return pointer with egxp_opcode_get_id
+ 	- add functions to egxp_conditional_node with some helper function
+ 	- update the test example
++	- add Egxp_ProtocolHandler
++	- configure.ac add depends on expat
++	- add the GPL in each source file
+ 	
+ 2005-02-06(jol):
+ 	- fix a memleak from egxp_free
+
+Modified: TODO
+===================================================================
+--- TODO	2005-02-07 20:18:23 UTC (rev 5)
++++ TODO	2005-02-07 22:52:12 UTC (rev 6)
+@@ -1,2 +1,3 @@
+ - Change the Egxp_ChildNode to Egxp_BaseNode
+ - Egxp_Node must inherit from Egxp_BaseNode
++- Continue the ProtocolHandler stuff
+
+Modified: configure.ac
+===================================================================
+--- configure.ac	2005-02-07 20:18:23 UTC (rev 5)
++++ configure.ac	2005-02-07 22:52:12 UTC (rev 6)
+@@ -20,6 +20,10 @@
+ 
+ 
+ # PKG_CHECK_MODULES(IDN, libidn &gt;= 0.4.1)
++
++
++
++dnl Check for ecore
+ AC_ARG_WITH(ecore-config, [  --with-ecore-config=ECORE_CONFIG  use ecore-config specified ],
+ [ ECORE_CONFIG=$withval;
+   echo &quot;using &quot;$ECORE_CONFIG&quot; for ecore-config&quot;; ],
+@@ -33,6 +37,40 @@
+ AC_SUBST(ecore_cflags)
+ 
+ 
++
++dnl Check for expat
++EXPAT_INCLUDE=&quot;&quot;
++EXPAT_LIB=&quot;-lexpat&quot;
++EXPAT_SUBDIR=&quot;&quot;
++LIBEXPAT=&quot;-lexpat&quot;
++
++have_expat_lib=no
++have_expat_include=no
++
++AC_CHECK_HEADER(expat.h, [have_expat_include=yes])
++
++if test x$have_expat_include = xno; then
++    AC_MSG_ERROR(
++    [*** Unable to find expat header file! (<A HREF="http://expat.sourceforge.net">http://expat.sourceforge.net</A>)]
++    [Please install the library and header files if you want to link to the shared library.]
++    )
++fi
++
++AC_CHECK_LIB(expat, XML_ParserCreate, have_expat_lib=yes)
++
++if test x$have_expat_lib = xno; then
++   AC_MSG_ERROR(
++    [*** Unable to find expat xml library! (<A HREF="http://expat.sourceforge.net">http://expat.sourceforge.net</A>)]
++    [Please install the library and header files if you want to link to the shared library.]
++    )
++fi
++
++AC_SUBST(EXPAT_INCLUDE)
++AC_SUBST(EXPAT_LIB)
++AC_SUBST(EXPAT_SUBDIR)
++AC_SUBST(LIBEXPAT)
++
++
+ AC_OUTPUT([
+ Makefile
+ src/Makefile
+
+Modified: src/egxp/Makefile.am
+===================================================================
+--- src/egxp/Makefile.am	2005-02-07 20:18:23 UTC (rev 5)
++++ src/egxp/Makefile.am	2005-02-07 22:52:12 UTC (rev 6)
+@@ -17,7 +17,8 @@
+ 	egxp_node.h          \
+ 	egxp_opcode.h        \
+ 	egxp.h               \
+-	egxp_conditional_node.h
++	egxp_conditional_node.h \
++	egxp_protocol_handler.h
+ 
+ 
+ libegxp_la_SOURCES = \
+@@ -27,7 +28,8 @@
+ 	egxp_node.c         \
+ 	egxp_opcode.c       \
+ 	egxp.c              \
+-	egxp_conditional_node.c
++	egxp_conditional_node.c \
++	egxp_protocol_handler.c
+ 
+-libegxp_la_LIBADD = $(ecore_libs) $(IDN_LIBS) -lexpat
+-libegxp_la_CFLAGS = $(ecore_cflags) $(IDN_CFLAGS)
++libegxp_la_LIBADD = $(ecore_libs) $(IDN_LIBS) $(EXPAT_LIB)
++libegxp_la_CFLAGS = $(ecore_cflags) $(IDN_CFLAGS) $(EXPAT_INCLUDE)
+
+Modified: src/egxp/egxp.c
+===================================================================
+--- src/egxp/egxp.c	2005-02-07 20:18:23 UTC (rev 5)
++++ src/egxp/egxp.c	2005-02-07 22:52:12 UTC (rev 6)
+@@ -1,3 +1,24 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++
+ #include &lt;assert.h&gt;
+ #include &lt;stdlib.h&gt;
+ #include &quot;egxp.h&quot;
+@@ -7,8 +28,18 @@
+   printf(&quot;TRACE: egxp_new\n&quot;);
+ #endif
+   Egxp * tmp = EGXP(malloc (sizeof(Egxp)));
++  /* define the opcode */
+   tmp-&gt;opcodes = egxp_opcode_new ();
++  
++  /* the root of the protocol */
+   tmp-&gt;root = NULL;
++  
++  /* initialize the user data */
++  tmp-&gt;user_data = NULL;
++  
++  /* define the protocol handler */
++  tmp-&gt;protocol_handler = egxp_protocol_handler_new (tmp);
++
+   return tmp;
+ }
+ 
+@@ -18,7 +49,12 @@
+   printf(&quot;TRACE: egxp_free\n&quot;);
+ #endif
+   assert (e);
++  /* free opcode */
+   egxp_opcode_free (e-&gt;opcodes);
++  /* free node */
+   if (e-&gt;root) egxp_node_free(e-&gt;root);
++  /* free protocol handler */
++  if (e-&gt;protocol_handler) egxp_protocol_handler_free (e-&gt;protocol_handler);
++  
+   free (e);
+ }
+
+Modified: src/egxp/egxp.h
+===================================================================
+--- src/egxp/egxp.h	2005-02-07 20:18:23 UTC (rev 5)
++++ src/egxp/egxp.h	2005-02-07 22:52:12 UTC (rev 6)
+@@ -1,3 +1,24 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++
+ #ifndef egxp_header_h_
+ #define egxp_header_h_
+ 
+@@ -8,7 +29,9 @@
+ #include &quot;egxp_condition.h&quot;
+ #include &quot;egxp_message.h&quot;
+ #include &quot;egxp_conditional_node.h&quot;
++#include &quot;egxp_protocol_handler.h&quot;
+ 
++
+ typedef struct _Egxp Egxp;
+ #define EGXP(o) ((Egxp*)o)
+ struct _Egxp {
+@@ -17,6 +40,12 @@
+   
+   /* root node */
+   Egxp_Node * root;
++
++  /* the protocol handler */
++  Egxp_ProtocolHandler * protocol_handler;
++
++  /* specific user data */
++  void * user_data;
+ };
+ 
+ 
+
+Modified: src/egxp/egxp_child_node.c
+===================================================================
+--- src/egxp/egxp_child_node.c	2005-02-07 20:18:23 UTC (rev 5)
++++ src/egxp/egxp_child_node.c	2005-02-07 22:52:12 UTC (rev 6)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #include &lt;assert.h&gt;
+ #include &lt;stdlib.h&gt;
+ 
+
+Modified: src/egxp/egxp_child_node.h
+===================================================================
+--- src/egxp/egxp_child_node.h	2005-02-07 20:18:23 UTC (rev 5)
++++ src/egxp/egxp_child_node.h	2005-02-07 22:52:12 UTC (rev 6)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #ifndef egxp_childnode_header_h_
+ #define egxp_childnode_header_h_
+ 
+
+Modified: src/egxp/egxp_condition.c
+===================================================================
+--- src/egxp/egxp_condition.c	2005-02-07 20:18:23 UTC (rev 5)
++++ src/egxp/egxp_condition.c	2005-02-07 22:52:12 UTC (rev 6)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #include &lt;assert.h&gt;
+ #include &lt;stdio.h&gt;
+ 
+
+Modified: src/egxp/egxp_condition.h
+===================================================================
+--- src/egxp/egxp_condition.h	2005-02-07 20:18:23 UTC (rev 5)
++++ src/egxp/egxp_condition.h	2005-02-07 22:52:12 UTC (rev 6)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #ifndef egxp_condition_header_h_
+ #define egxp_condition_header_h_
+ 
+
+Modified: src/egxp/egxp_conditional_node.c
+===================================================================
+--- src/egxp/egxp_conditional_node.c	2005-02-07 20:18:23 UTC (rev 5)
++++ src/egxp/egxp_conditional_node.c	2005-02-07 22:52:12 UTC (rev 6)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #include &lt;assert.h&gt;
+ #include &lt;stdlib.h&gt;
+ #include &lt;Ecore_Data.h&gt;
+
+Modified: src/egxp/egxp_conditional_node.h
+===================================================================
+--- src/egxp/egxp_conditional_node.h	2005-02-07 20:18:23 UTC (rev 5)
++++ src/egxp/egxp_conditional_node.h	2005-02-07 22:52:12 UTC (rev 6)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #ifndef egxp_conditional_node_header_h_
+ #define egxp_conditional_node_header_h_
+ 
+
+Modified: src/egxp/egxp_message.c
+===================================================================
+--- src/egxp/egxp_message.c	2005-02-07 20:18:23 UTC (rev 5)
++++ src/egxp/egxp_message.c	2005-02-07 22:52:12 UTC (rev 6)
+@@ -1,3 +1,24 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++
+ #include &lt;string.h&gt;
+ #include &lt;stdlib.h&gt;
+ #include &lt;assert.h&gt;
+
+Modified: src/egxp/egxp_message.h
+===================================================================
+--- src/egxp/egxp_message.h	2005-02-07 20:18:23 UTC (rev 5)
++++ src/egxp/egxp_message.h	2005-02-07 22:52:12 UTC (rev 6)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #ifndef header_egxp_message_h
+ #define header_egxp_message_h
+ 
+
+Modified: src/egxp/egxp_node.c
+===================================================================
+--- src/egxp/egxp_node.c	2005-02-07 20:18:23 UTC (rev 5)
++++ src/egxp/egxp_node.c	2005-02-07 22:52:12 UTC (rev 6)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #include &lt;assert.h&gt;
+ #include &lt;stdlib.h&gt;
+ #include &lt;stdio.h&gt;
+
+Modified: src/egxp/egxp_node.h
+===================================================================
+--- src/egxp/egxp_node.h	2005-02-07 20:18:23 UTC (rev 5)
++++ src/egxp/egxp_node.h	2005-02-07 22:52:12 UTC (rev 6)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #ifndef egxp_node_header_h_
+ #define egxp_node_header_h_
+ 
+
+Modified: src/egxp/egxp_node_struct.h
+===================================================================
+--- src/egxp/egxp_node_struct.h	2005-02-07 20:18:23 UTC (rev 5)
++++ src/egxp/egxp_node_struct.h	2005-02-07 22:52:12 UTC (rev 6)
+@@ -1,3 +1,24 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++
+ #ifndef EGXP_NODE_STRUCT_H_
+ #define EGXP_NODE_STRUCT_H_
+ 
+
+Modified: src/egxp/egxp_opcode.c
+===================================================================
+--- src/egxp/egxp_opcode.c	2005-02-07 20:18:23 UTC (rev 5)
++++ src/egxp/egxp_opcode.c	2005-02-07 22:52:12 UTC (rev 6)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #include &lt;assert.h&gt;
+ #include &lt;stdlib.h&gt;
+ #include &lt;stdio.h&gt;
+
+Modified: src/egxp/egxp_opcode.h
+===================================================================
+--- src/egxp/egxp_opcode.h	2005-02-07 20:18:23 UTC (rev 5)
++++ src/egxp/egxp_opcode.h	2005-02-07 22:52:12 UTC (rev 6)
+@@ -1,3 +1,23 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
+ #ifndef egxp_opcode_header_h_
+ #define egxp_opcode_header_h_
+ 
+
+Added: src/egxp/egxp_protocol_handler.c
+===================================================================
+--- src/egxp/egxp_protocol_handler.c	2005-02-07 20:18:23 UTC (rev 5)
++++ src/egxp/egxp_protocol_handler.c	2005-02-07 22:52:12 UTC (rev 6)
+@@ -0,0 +1,108 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++#include &lt;assert.h&gt;
++#include &quot;egxp.h&quot;
++#include &quot;egxp_protocol_handler.h&quot;
++
++
++/**
++ * XML Parser Callback
++ */
++void egxp_protocol_handler_start_element(void *userData, const char *name, const char **atts);
++void egxp_protocol_handler_end_element(void *userData, const char *name);
++void egxp_protocol_handler_char_data (void *userData, const XML_Char *s, int len);
++
++
++Egxp_ProtocolHandler * egxp_protocol_handler_new (struct _Egxp * e) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_protocol_handler_new\n&quot;);
++#endif 
++  
++  assert (e);
++  
++  /* create and initialize the protocol handler */
++  Egxp_ProtocolHandler * tmp = EGXP_PROTOCOLHANDLER (malloc (sizeof(Egxp_ProtocolHandler)));
++  tmp-&gt;current_msg = NULL;
++
++  /* initialize the xml parser */
++  tmp-&gt;parser = XML_ParserCreate(NULL);
++  XML_SetUserData(tmp-&gt;parser, e);
++  XML_SetElementHandler(tmp-&gt;parser, 
++			egxp_protocol_handler_start_element, 
++			egxp_protocol_handler_end_element);
++  XML_SetCharacterDataHandler(tmp-&gt;parser,  egxp_protocol_handler_char_data);
++  
++  return tmp;
++}
++
++void egxp_protocol_handler_free (Egxp_ProtocolHandler * ph) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_protocol_handler_free\n&quot;);
++#endif 
++  
++  assert (ph);
++  
++  /* need to free the parser */
++  if (ph-&gt;parser) XML_ParserFree(ph-&gt;parser);
++
++  /* do we need to free the message ? */
++  if (ph-&gt;current_msg) {
++    // ???
++  }
++  
++  free (ph);
++}
++
++
++
++
++
++
++
++void egxp_protocol_handler_start_element(void *userData, const char *name, const char **atts) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_protocol_handler_start_element\n&quot;);
++#endif
++  assert (userData &amp;&amp; name);
++  
++  /* really hard stuff here, we need to keep in a stack the protocol evolution
++     in order to call the correct callback */
++
++  /* we need to store the message hierarchy here (current_msg) */
++  
++}
++
++void egxp_protocol_handler_end_element(void *userData, const char *name) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_protocol_handler_end_element\n&quot;);
++#endif
++  assert (userData &amp;&amp; name);
++
++}
++
++void egxp_protocol_handler_char_data (void *userData, const XML_Char *s, int len) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_protocol_handler_char_data\n&quot;);
++#endif
++  assert (userData);
++  
++  
++}
+
+Added: src/egxp/egxp_protocol_handler.h
+===================================================================
+--- src/egxp/egxp_protocol_handler.h	2005-02-07 20:18:23 UTC (rev 5)
++++ src/egxp/egxp_protocol_handler.h	2005-02-07 22:52:12 UTC (rev 6)
+@@ -0,0 +1,60 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++#ifndef egxp_protocol_handler_header_h_
++#define egxp_protocol_handler_header_h_
++
++#include &lt;expat.h&gt;
++#include &quot;egxp_message.h&quot;
++
++struct _Egxp;
++
++typedef struct _Egxp_ProtocolHandler Egxp_ProtocolHandler;
++#define EGXP_PROTOCOLHANDLER(o) ((Egxp_ProtocolHandler*)o)
++struct _Egxp_ProtocolHandler {
++  
++  /* the current message */
++  Egxp_Message * current_msg;
++
++  /* the XML Parser */
++  XML_Parser parser;
++};
++
++
++/**
++ * Allocate the protocol handler structure
++ *  - initialize the XML Parser and set Egxp struct as a user data of
++ *    the xml parser.
++ * @param e: the Egxp structure sets as user data for the xml parser
++ */
++Egxp_ProtocolHandler * egxp_protocol_handler_new (struct _Egxp * e);
++
++
++/**
++ * Free the protocol handler
++ * @param ph: the protocol handler to be freed.
++ */
++void egxp_protocol_handler_free (Egxp_ProtocolHandler * ph);
++
++
++
++
++
++#endif
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000001.html">[Eim-svn] r5 - src/egxp
+</A></li>
+	<LI>Next message: <A HREF="000003.html">[Eim-svn] r7 - / src/egxp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2">[ date ]</a>
+              <a href="thread.html#2">[ thread ]</a>
+              <a href="subject.html#2">[ subject ]</a>
+              <a href="author.html#2">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

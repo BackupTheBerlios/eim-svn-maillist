@@ -1,0 +1,486 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r4 - / src/egxp
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-February/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r4%20-%20/%20src/egxp&In-Reply-To=%3C200502071932.j17JWVAx009516%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000001.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r4 - / src/egxp</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r4%20-%20/%20src/egxp&In-Reply-To=%3C200502071932.j17JWVAx009516%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r4 - / src/egxp">jol at sheep.berlios.de
+       </A><BR>
+    <I>Mon Feb  7 20:32:31 CET 2005</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000001.html">[Eim-svn] r5 - src/egxp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#0">[ date ]</a>
+              <a href="thread.html#0">[ thread ]</a>
+              <a href="subject.html#0">[ subject ]</a>
+              <a href="author.html#0">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-02-07 20:32:30 +0100 (Mon, 07 Feb 2005)
+New Revision: 4
+
+Modified:
+   ChangeLog
+   src/egxp/egxp.h
+   src/egxp/egxp_condition.c
+   src/egxp/egxp_condition.h
+   src/egxp/egxp_conditional_node.c
+   src/egxp/egxp_conditional_node.h
+   src/egxp/egxp_node.c
+   src/egxp/egxp_node.h
+   src/egxp/egxp_opcode.c
+   src/egxp/egxp_opcode.h
+   src/egxp/test.c
+Log:
+- do not return pointer with egxp_opcode_get_id
+- add functions to egxp_conditional_node with some helper function
+- update the test example
+
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-02-06 22:18:47 UTC (rev 3)
++++ ChangeLog	2005-02-07 19:32:30 UTC (rev 4)
+@@ -1,3 +1,8 @@
++2005-02-07(jol):
++	- do not return pointer with egxp_opcode_get_id
++	- add functions to egxp_conditional_node with some helper function
++	- update the test example
++	
+ 2005-02-06(jol):
+ 	- fix a memleak from egxp_free
+ 	- add Egxp_ConditionalNode
+
+Modified: src/egxp/egxp.h
+===================================================================
+--- src/egxp/egxp.h	2005-02-06 22:18:47 UTC (rev 3)
++++ src/egxp/egxp.h	2005-02-07 19:32:30 UTC (rev 4)
+@@ -7,8 +7,8 @@
+ #include &quot;egxp_opcode.h&quot;
+ #include &quot;egxp_condition.h&quot;
+ #include &quot;egxp_message.h&quot;
++#include &quot;egxp_conditional_node.h&quot;
+ 
+-
+ typedef struct _Egxp Egxp;
+ #define EGXP(o) ((Egxp*)o)
+ struct _Egxp {
+
+Modified: src/egxp/egxp_condition.c
+===================================================================
+--- src/egxp/egxp_condition.c	2005-02-06 22:18:47 UTC (rev 3)
++++ src/egxp/egxp_condition.c	2005-02-07 19:32:30 UTC (rev 4)
+@@ -3,7 +3,7 @@
+ 
+ #include &quot;egxp_condition.h&quot;
+ 
+-Egxp_Condition * egxp_condition_new (const unsigned int key, const unsigned int value) {
++Egxp_Condition * egxp_condition_new (const int key, const int value) {
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_condition_new\n&quot;);
+ #endif
+
+Modified: src/egxp/egxp_condition.h
+===================================================================
+--- src/egxp/egxp_condition.h	2005-02-06 22:18:47 UTC (rev 3)
++++ src/egxp/egxp_condition.h	2005-02-07 19:32:30 UTC (rev 4)
+@@ -8,7 +8,7 @@
+  * @param key: the id of the key
+  * @param value: the id of the value
+  */
+-Egxp_Condition * egxp_condition_new (const unsigned int key, const unsigned int value); 
++Egxp_Condition * egxp_condition_new (const int key, const int value); 
+ 
+ /**
+  * Free the memory of the condition
+
+Modified: src/egxp/egxp_conditional_node.c
+===================================================================
+--- src/egxp/egxp_conditional_node.c	2005-02-06 22:18:47 UTC (rev 3)
++++ src/egxp/egxp_conditional_node.c	2005-02-07 19:32:30 UTC (rev 4)
+@@ -1,6 +1,9 @@
+ #include &lt;assert.h&gt;
+ #include &lt;stdlib.h&gt;
+ #include &lt;Ecore_Data.h&gt;
++
++#include &quot;egxp_child_node.h&quot;
++#include &quot;egxp_node.h&quot;
+ #include &quot;egxp_conditional_node.h&quot;
+ 
+ Egxp_ConditionalNode * egxp_conditional_node_new (Egxp_Node * parent) {
+@@ -9,21 +12,87 @@
+ #endif
+   assert (parent);
+   
++  /* create and initialize the structure */
+   Egxp_ConditionalNode * tmp = EGXP_CONDITIONALNODE(malloc (sizeof(Egxp_ConditionalNode)));
+   tmp-&gt;parent = parent;
+   tmp-&gt;conditions = NULL;
+   tmp-&gt;child = NULL;
++  
++  /* add this conditional node to the parent */
++  egxp_node_add_conditional_node (tmp-&gt;parent, tmp);
++  
++
+   return tmp;
+ }
+ 
+ 
++Egxp_ConditionalNode * egxp_conditional_node_new_with_condition (Egxp_Node * parent, Egxp_Condition * cond) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_conditional_node_new_with_condition\n&quot;);
++#endif
++  assert(parent &amp;&amp; cond);
++
++  Egxp_ConditionalNode * tmp = egxp_conditional_node_new (parent);
++  egxp_conditional_node_add_condition (tmp, cond);
++  
++  return tmp;
++}
++
+ void egxp_conditional_node_free (Egxp_ConditionalNode * c) {
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_conditional_node_free\n&quot;);
+ #endif
+   assert (c);
+   
++  /* free the structure */
+   if (c-&gt;child) egxp_child_node_free (c-&gt;child);
+   if (c-&gt;conditions) ecore_list_destroy (c-&gt;conditions);
+   free (c);
+ }
++
++
++void egxp_conditional_node_add_condition (Egxp_ConditionalNode * cn, Egxp_Condition * cond) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_conditional_node_add_condition\n&quot;);
++#endif
++  
++  assert (cn &amp;&amp; cond);
++  
++  /* check if the conditions lists is created */
++  if (cn-&gt;conditions == NULL) {
++    cn-&gt;conditions = ecore_list_new ();
++    ecore_list_set_free_cb (cn-&gt;conditions, free);
++  }
++  
++  /* append the condition */
++  ecore_list_append (cn-&gt;conditions, cond);
++}
++
++void egxp_conditional_node_set_cb (Egxp_ConditionalNode * n, egxp_callback_ptr * begin, egxp_callback_ptr * end) {
++  #ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_conditional_node_set_callback\n&quot;);
++#endif 
++
++  assert (n);
++  
++  /* check if the child node is created */
++  if (n-&gt;child == NULL) n-&gt;child = egxp_child_node_new ();
++  
++  /* set the attributes */
++  n-&gt;child-&gt;begin_func = begin;
++  n-&gt;child-&gt;end_func = end;
++}
++
++
++void egxp_conditional_node_add_child_node (Egxp_ConditionalNode * parent, Egxp_Node * child) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_conditional_node_add_child_node\n&quot;);
++#endif
++  assert (parent &amp;&amp; child);
++
++  /* check if the child node is created */
++  if (parent-&gt;child == NULL) parent-&gt;child = egxp_child_node_new ();
++
++  /* add the node to the child element */
++  egxp_child_node_add_node (parent-&gt;child, child);
++}
+
+Modified: src/egxp/egxp_conditional_node.h
+===================================================================
+--- src/egxp/egxp_conditional_node.h	2005-02-06 22:18:47 UTC (rev 3)
++++ src/egxp/egxp_conditional_node.h	2005-02-07 19:32:30 UTC (rev 4)
+@@ -11,8 +11,37 @@
+  */
+ Egxp_ConditionalNode * egxp_conditional_node_new (Egxp_Node * parent);
+ 
++Egxp_ConditionalNode * egxp_conditional_node_new_with_condition (Egxp_Node * parent, Egxp_Condition * cond);
+ 
+ 
++/**
++ * Free the memory of the ConditionalNode Structure
++ */
+ void egxp_conditional_node_free (Egxp_ConditionalNode * c);
+ 
++
++/**
++ * Add a condition to the condition list
++ * - If the condition list is not created, we create it.
++ * @param cn: the conditional node
++ * @param cond: the condition to add
++ */
++void egxp_conditional_node_add_condition (Egxp_ConditionalNode * cn, Egxp_Condition * cond);
++
++
++/**
++ * Add the callback function to the node
++ * @param begin:
++ * @param end:
++ */
++void egxp_conditional_node_set_cb (Egxp_ConditionalNode * n, egxp_callback_ptr * begin, egxp_callback_ptr * end);
++
++
++/**
++ * Add a node to the node
++ * @param parent: the parent node
++ * @param end: the child node
++ */
++void egxp_conditional_node_add_child_node (Egxp_ConditionalNode * parent, Egxp_Node * child);
++
+ #endif
+
+Modified: src/egxp/egxp_node.c
+===================================================================
+--- src/egxp/egxp_node.c	2005-02-06 22:18:47 UTC (rev 3)
++++ src/egxp/egxp_node.c	2005-02-07 19:32:30 UTC (rev 4)
+@@ -5,6 +5,7 @@
+ #include &lt;Ecore_Data.h&gt;
+ 
+ #include &quot;egxp_child_node.h&quot;
++#include &quot;egxp_conditional_node.h&quot;
+ #include &quot;egxp_node.h&quot;
+ 
+ Egxp_Node * egxp_node_new (const unsigned int tag) {
+@@ -36,7 +37,7 @@
+ }
+ 
+ 
+-void egxp_node_set_callback (Egxp_Node * n, egxp_callback_ptr * begin, egxp_callback_ptr * end) {
++void egxp_node_set_cb (Egxp_Node * n, egxp_callback_ptr * begin, egxp_callback_ptr * end) {
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_node_set_callback\n&quot;);
+ #endif 
+@@ -64,3 +65,18 @@
+   /* add the node to the child element */
+   egxp_child_node_add_node (parent-&gt;child, child);  
+ }
++
++
++void egxp_node_add_conditional_node (Egxp_Node * parent, Egxp_ConditionalNode * child) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_node_add_conditional_node\n&quot;);
++#endif
++  assert (parent &amp;&amp; child);
++
++  if (parent-&gt;conditions == NULL) {
++    parent-&gt;conditions = ecore_list_new ();
++    ecore_list_set_free_cb (parent-&gt;conditions, egxp_conditional_node_free);
++  }
++  
++  ecore_list_append (parent-&gt;conditions, child);
++}
+
+Modified: src/egxp/egxp_node.h
+===================================================================
+--- src/egxp/egxp_node.h	2005-02-06 22:18:47 UTC (rev 3)
++++ src/egxp/egxp_node.h	2005-02-07 19:32:30 UTC (rev 4)
+@@ -22,7 +22,7 @@
+  * @param begin:
+  * @param end:
+  */
+-void egxp_node_set_callback (Egxp_Node * n, egxp_callback_ptr * begin, egxp_callback_ptr * end);
++void egxp_node_set_cb (Egxp_Node * n, egxp_callback_ptr * begin, egxp_callback_ptr * end);
+ 
+ 
+ /**
+@@ -33,4 +33,12 @@
+ void egxp_node_add_child_node (Egxp_Node * parent, Egxp_Node * child);
+ 
+ 
++/**
++ * Add a Conditional node to the node
++ * @param parent: the parent node
++ * @param end: the child node
++ */
++void egxp_node_add_conditional_node (Egxp_Node * parent, Egxp_ConditionalNode * child);
++
++
+ #endif
+
+Modified: src/egxp/egxp_opcode.c
+===================================================================
+--- src/egxp/egxp_opcode.c	2005-02-06 22:18:47 UTC (rev 3)
++++ src/egxp/egxp_opcode.c	2005-02-07 19:32:30 UTC (rev 4)
+@@ -37,7 +37,7 @@
+ }
+ 
+ 
+-unsigned int egxp_opcode_add (Egxp_Opcode * op, const char * name) {
++int egxp_opcode_add (Egxp_Opcode * op, const char * name) {
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_opcode_add\n&quot;);
+ #endif
+@@ -45,7 +45,7 @@
+   assert (op &amp;&amp; name);
+   
+   /* allocate the memory for the id */
+-  unsigned int * id = (unsigned int*) malloc (sizeof (unsigned int));
++  int * id = (int*) malloc (sizeof (int));
+   *id = op-&gt;id++;
+   
+   /* add the new element */
+@@ -85,7 +85,7 @@
+ }
+ 
+ 
+-const char * egxp_opcode_get_string (Egxp_Opcode * op, const unsigned int id) {
++const char * egxp_opcode_get_string (Egxp_Opcode * op, const int id) {
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_opcode_get_string\n&quot;);
+ #endif
+@@ -99,13 +99,20 @@
+ }
+ 
+ 
+-const unsigned int * egxp_opcode_get_id (const Egxp_Opcode *op, const char * name) {
++const int egxp_opcode_get_id (const Egxp_Opcode *op, const char * name) {
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_opcode_get_id\n&quot;);
+ #endif
+   assert (op &amp;&amp; name);
+ 
+-  return ((int*)ecore_hash_get (op-&gt;string_id, (char*)name));
++  int * tmp = ecore_hash_get (op-&gt;string_id, (char*)name);
++  if (!tmp) {
++    printf(&quot;ERROR: opcode %s seems to has no id\n&quot;); 
++    assert (0);
++    return -1;
++  }
++  
++  return *tmp;
+ }
+ 
+ 
+
+Modified: src/egxp/egxp_opcode.h
+===================================================================
+--- src/egxp/egxp_opcode.h	2005-02-06 22:18:47 UTC (rev 3)
++++ src/egxp/egxp_opcode.h	2005-02-07 19:32:30 UTC (rev 4)
+@@ -42,7 +42,7 @@
+  * @param name: The string representation
+  * @return the newly created id.
+  */
+-unsigned int egxp_opcode_add (Egxp_Opcode * op, const char * name);
++int egxp_opcode_add (Egxp_Opcode * op, const char * name);
+ 
+ 
+ /**
+@@ -60,7 +60,7 @@
+  * @param id: The id
+  * @return: the string id
+  */
+-const char * egxp_opcode_get_string (Egxp_Opcode * op, const unsigned int id);
++const char * egxp_opcode_get_string (Egxp_Opcode * op, const int id);
+ 
+ 
+ /**
+@@ -69,7 +69,7 @@
+  * @param id: The id
+  * @return: the string id
+  */
+-const unsigned int * egxp_opcode_get_id (const Egxp_Opcode *op, const char * name);
++const int egxp_opcode_get_id (const Egxp_Opcode *op, const char * name);
+ 
+ 
+ /**
+
+Modified: src/egxp/test.c
+===================================================================
+--- src/egxp/test.c	2005-02-06 22:18:47 UTC (rev 3)
++++ src/egxp/test.c	2005-02-07 19:32:30 UTC (rev 4)
+@@ -11,8 +11,8 @@
+   Egxp_Node * n1 = NULL;
+   Egxp_Node * n2 = NULL;
+   Egxp_Node * n3 = NULL;
+-  Egxp_Condition * c1 = NULL;
+-
++  Egxp_ConditionalNode * c1 = NULL;
++  
+   /* define basics grammar */
+   egxp_opcode_add (ph-&gt;opcodes, &quot;stream&quot;);
+   egxp_opcode_add (ph-&gt;opcodes, &quot;jabber:iq:auth&quot;);
+@@ -27,17 +27,23 @@
+   egxp_opcode_display (ph-&gt;opcodes);
+ 
+   /* define the protocol */
+-  ph-&gt;root = egxp_node_new (*egxp_opcode_get_id (ph-&gt;opcodes, &quot;stream&quot;));
++  ph-&gt;root = egxp_node_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;stream&quot;));
+   
+   /* add the iq part as example */
+-  n1 = egxp_node_new (*egxp_opcode_get_id (ph-&gt;opcodes, &quot;iq&quot;));
++  n1 = egxp_node_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;iq&quot;));
+   egxp_node_add_child_node (ph-&gt;root, n1);
+-  
++  egxp_node_set_cb (n11, NULL, NULL);
++
+   /* add iq type = get */
+-  c1 = egxp_condition_new (*egxp_opcode_get_id (ph-&gt;opcodes, &quot;type&quot;),
+-			   *egxp_opcode_get_id (ph-&gt;opcodes, &quot;get&quot;));
++  c1 = egxp_conditional_node_new_with_condition (n1, egxp_condition_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;type&quot;),
++									 egxp_opcode_get_id (ph-&gt;opcodes, &quot;get&quot;)));
++  egxp_conditional_node_set_cb (c1, NULL, NULL);
+   
+-  
++  /* add iq type = set */
++  c1 = egxp_conditional_node_new_with_condition (n1, egxp_condition_new (egxp_opcode_get_id (ph-&gt;opcodes, &quot;type&quot;),
++									 egxp_opcode_get_id (ph-&gt;opcodes, &quot;set&quot;)));
++  egxp_conditional_node_set_cb (c1, NULL, NULL);
++
+   /* free opcode */
+   egxp_free (ph);
+   
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000001.html">[Eim-svn] r5 - src/egxp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#0">[ date ]</a>
+              <a href="thread.html#0">[ thread ]</a>
+              <a href="subject.html#0">[ subject ]</a>
+              <a href="author.html#0">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

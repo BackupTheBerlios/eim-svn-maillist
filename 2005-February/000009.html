@@ -1,0 +1,610 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r13 - / src/egxp src/xmpp
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-February/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r13%20-%20/%20src/egxp%20src/xmpp&In-Reply-To=%3C200502152137.j1FLbXcY005543%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000008.html">
+   <LINK REL="Next"  HREF="000010.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r13 - / src/egxp src/xmpp</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r13%20-%20/%20src/egxp%20src/xmpp&In-Reply-To=%3C200502152137.j1FLbXcY005543%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r13 - / src/egxp src/xmpp">jol at sheep.berlios.de
+       </A><BR>
+    <I>Tue Feb 15 22:37:33 CET 2005</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000008.html">[Eim-svn] r12 - / src/egxp src/xmpp
+</A></li>
+        <LI>Next message: <A HREF="000010.html">[Eim-svn] r14 - / doc src src/egxp src/xmpp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9">[ date ]</a>
+              <a href="thread.html#9">[ thread ]</a>
+              <a href="subject.html#9">[ subject ]</a>
+              <a href="author.html#9">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-02-15 22:37:32 +0100 (Tue, 15 Feb 2005)
+New Revision: 13
+
+Added:
+   src/xmpp/xmpp_auth.c
+   src/xmpp/xmpp_auth.h
+Modified:
+   ChangeLog
+   src/egxp/egxp.c
+   src/egxp/egxp.h
+   src/egxp/egxp_connection.c
+   src/egxp/egxp_connection.h
+   src/xmpp/Makefile.am
+   src/xmpp/test.c
+   src/xmpp/xmpp.c
+   src/xmpp/xmpp.h
+   src/xmpp/xmpp_callback.c
+   src/xmpp/xmpp_callback.h
+   src/xmpp/xmpp_message.c
+   src/xmpp/xmpp_message.h
+   src/xmpp/xmpp_opcode.h
+   src/xmpp/xmpp_struct.h
+Log:
+- now it's possible to connect to a server
+- add the xmpp_auth file which should handle authentification process
+- The first step of authentification is done
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-02-13 16:40:57 UTC (rev 12)
++++ ChangeLog	2005-02-15 21:37:32 UTC (rev 13)
+@@ -1,3 +1,8 @@
++2005-02-15(jol):
++	- now it's possible to connect to a server
++	- add the xmpp_auth file which should handle authentification process
++	- The first step of authentification is done
++	
+ 2005-02-13(jol):
+ 	- Add connection control inside egxp. So it's now possible to connect/disconnect 
+ 	  and get/send message to a server.
+@@ -41,4 +46,3 @@
+ 	- fix a memleak from egxp_free
+ 	- add Egxp_ConditionalNode
+ 	- add TODO file
+-	
+
+Modified: src/egxp/egxp.c
+===================================================================
+--- src/egxp/egxp.c	2005-02-13 16:40:57 UTC (rev 12)
++++ src/egxp/egxp.c	2005-02-15 21:37:32 UTC (rev 13)
+@@ -116,3 +116,13 @@
+ 
+   return ecore_hash_get (e-&gt;extensions, (int*)id);
+ }
++
++void * egxp_extension_get_from_string (Egxp *e, char * id) {
++#ifdef EGXP_DEBUG
++  printf(&quot;TRACE: egxp_extension_get_from_string\n&quot;);
++#endif
++  assert (e &amp;&amp; id);
++  assert (e-&gt;extensions);
++
++  return egxp_extension_get (e, egxp_opcode_get_id (e-&gt;opcodes, id));
++}
+
+Modified: src/egxp/egxp.h
+===================================================================
+--- src/egxp/egxp.h	2005-02-13 16:40:57 UTC (rev 12)
++++ src/egxp/egxp.h	2005-02-15 21:37:32 UTC (rev 13)
+@@ -97,4 +97,9 @@
+  */
+ void * egxp_extension_get (Egxp *e, int id);
+ 
++
++/**
++ * @return the extension
++ */
++void * egxp_extension_get_from_string (Egxp *e, char * id);
+ #endif
+
+Modified: src/egxp/egxp_connection.c
+===================================================================
+--- src/egxp/egxp_connection.c	2005-02-13 16:40:57 UTC (rev 12)
++++ src/egxp/egxp_connection.c	2005-02-15 21:37:32 UTC (rev 13)
+@@ -57,7 +57,7 @@
+ 
+ unsigned int egxp_connection_connect (Egxp_Connection *c) {
+ #ifdef EGXP_DEBUG
+-  printf(&quot;TRACE: egxp_connection_connect\n&quot;);
++  printf(&quot;TRACE: egxp_connection_connect: %s:%d\n&quot;, c-&gt;host_addr, c-&gt;port);
+ #endif
+   assert (c);
+ 
+@@ -79,15 +79,15 @@
+ }
+ 
+ 
+-void egxp_connection_send_message (Egxp_Connection *c, Egxp_Message * msg) {
++void egxp_connection_send_message (Egxp_Connection *c, Egxp_Message * msg, unsigned int end_tag) {
+ #ifdef EGXP_DEBUG
+   printf(&quot;TRACE: egxp_connection_send_message\n&quot;);
+ #endif
+   assert (c &amp;&amp; msg);
+ 
+   // to xml
+-  char * buf = egxp_message_to_xml (msg, 1);
+-  printf(&quot;log send: %s\n&quot;, buf);
++  char * buf = egxp_message_to_xml (msg, end_tag);
++  printf(&quot;log send: %s\nsize: %d\n&quot;, buf, strlen (buf));
+   
+   // free message
+   egxp_message_free (msg);
+
+Modified: src/egxp/egxp_connection.h
+===================================================================
+--- src/egxp/egxp_connection.h	2005-02-13 16:40:57 UTC (rev 12)
++++ src/egxp/egxp_connection.h	2005-02-15 21:37:32 UTC (rev 13)
+@@ -76,8 +76,9 @@
+  * object after send it.
+  * @param c: The connection object
+  * @param msg: The message
++ * @param end_tag: if set to 1 we send the last &lt;/tag&gt; of the message, if it's equals to zero it not send the last tag ... 
+  */
+-void egxp_connection_send_message (Egxp_Connection *c, Egxp_Message * msg);
++void egxp_connection_send_message (Egxp_Connection *c, Egxp_Message * msg, unsigned int end_tag);
+ 
+ 
+ /**
+
+Modified: src/xmpp/Makefile.am
+===================================================================
+--- src/xmpp/Makefile.am	2005-02-13 16:40:57 UTC (rev 12)
++++ src/xmpp/Makefile.am	2005-02-15 21:37:32 UTC (rev 13)
+@@ -17,13 +17,15 @@
+ 	xmpp_struct.h    \
+ 	xmpp.h           \
+ 	xmpp_jid.h       \
+-	xmpp_message.h
++	xmpp_message.h   \
++	xmpp_auth.h
+ 
+ libxmpp_la_SOURCES = \
+ 	xmpp_opcode.c    \
+ 	xmpp_callback.c  \
+ 	xmpp.c           \
+ 	xmpp_jid.c       \
+-	xmpp_message.c
++	xmpp_message.c   \
++	xmpp_auth.c
+ 
+ libxmpp_la_CFLAGS = $(ecore_cflags) $(IDN_CFLAGS) $(EXPAT_INCLUDE) -I$(top_srcdir)/src
+
+Modified: src/xmpp/test.c
+===================================================================
+--- src/xmpp/test.c	2005-02-13 16:40:57 UTC (rev 12)
++++ src/xmpp/test.c	2005-02-15 21:37:32 UTC (rev 13)
+@@ -21,22 +21,22 @@
+     return 1;
+   }
+ 
++  /* initialize ecore connection */
++  ecore_con_init();
++
+   /* create Egxp  */
+   Egxp * eg = egxp_new ();
+   
+   /* initialize protocol */
+   Xmpp * xm = xmpp_register (eg);
+   
+-  
+-  /* initialize ecore connection */
+-  ecore_con_init();
+   /* after 3 second we quit the ecore loop */
+-  ecore_timer_add (8, timer_cb, NULL);
+-  printf(&quot;Quit automaticly (after 8 seconds)\n&quot;);
++  ecore_timer_add (5, timer_cb, NULL);
++  printf(&quot;Quit automaticly (after 5 seconds)\n&quot;);
+   
+   /* define the connection */
+   eg-&gt;connection = egxp_connection_new (argv[2], atoi (argv[3]), 0);
+-  if (egxp_connection_connect (eg-&gt;connection) == 0) {
++  if (egxp_connection_connect (eg-&gt;connection) == 0) { 
+     printf(&quot;Impossible to connect to %s %s\n&quot;, argv[2], argv[3]);
+   } else {
+     printf(&quot;We are connected to %s:%s\n&quot;, argv[2], argv[3]);
+@@ -46,8 +46,8 @@
+   xm-&gt;jid = xmpp_jid_new (argv[1], argv[2], &quot;eim&quot;);
+   
+   /* now we can send a message to the server */
++  xmpp_message_stream (xm);
+   
+-
+   /* ecore loop */
+   ecore_main_loop_begin();
+   /* shutdown */
+
+Modified: src/xmpp/xmpp.c
+===================================================================
+--- src/xmpp/xmpp.c	2005-02-13 16:40:57 UTC (rev 12)
++++ src/xmpp/xmpp.c	2005-02-15 21:37:32 UTC (rev 13)
+@@ -59,6 +59,9 @@
+   /* set the user name */
+   tmp-&gt;jid = NULL;
+ 
++  /* initialize authentification */
++  tmp-&gt;auth = NULL;
++
+   /* return the xmpp */
+   return tmp;
+ }
+@@ -72,6 +75,6 @@
+   assert (x);
+ 
+   if (x-&gt;jid) xmpp_jid_free(x-&gt;jid);
+-  
++  if (x-&gt;auth) xmpp_auth_free(x-&gt;auth);
+   FREE (x);
+ }
+
+Modified: src/xmpp/xmpp.h
+===================================================================
+--- src/xmpp/xmpp.h	2005-02-13 16:40:57 UTC (rev 12)
++++ src/xmpp/xmpp.h	2005-02-15 21:37:32 UTC (rev 13)
+@@ -27,6 +27,8 @@
+ #include &quot;xmpp_opcode.h&quot;
+ #include &quot;xmpp_callback.h&quot;
+ #include &quot;xmpp_jid.h&quot;
++#include &quot;xmpp_auth.h&quot;
++#include &quot;xmpp_message.h&quot;
+ 
+ #define XMPP_REGISTER &quot;__XMPP_REGISTER__&quot;
+ 
+
+Added: src/xmpp/xmpp_auth.c
+===================================================================
+--- src/xmpp/xmpp_auth.c	2005-02-13 16:40:57 UTC (rev 12)
++++ src/xmpp/xmpp_auth.c	2005-02-15 21:37:32 UTC (rev 13)
+@@ -0,0 +1,58 @@
++#include &lt;assert.h&gt;
++#include &lt;stdlib.h&gt;
++#include &lt;stdio.h&gt;
++
++#include &lt;Ecore_Data.h&gt;
++#include &quot;xmpp.h&quot;
++
++#include &quot;xmpp_auth.h&quot;
++
++Xmpp_Auth * xmpp_auth_new () {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_auth_new\n&quot;);
++#endif
++
++  Xmpp_Auth * auth = XMPP_AUTH(malloc (sizeof(Xmpp_Auth)));
++  
++  auth-&gt;password = NULL;
++  auth-&gt;stream_id = NULL;
++  
++  return auth;
++}
++
++
++void xmpp_auth_free (Xmpp_Auth * a) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_auth_free\n&quot;);
++#endif
++  assert (a);
++  
++  IF_FREE(a-&gt;password);
++  IF_FREE(a-&gt;stream_id);
++  FREE(a);
++}
++
++
++void xmpp_auth_msg_no_sasl (Xmpp * x) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_auth_msg_no_sasl\n&quot;);
++#endif
++  assert (x);
++ 
++  /* create the iq type=&quot;get&quot; */
++  Egxp_Message * iq = xmpp_message_iq (XMPP_VALUE_IQ_GET, &quot;auth_1&quot;, 
++				       x-&gt;jid-&gt;host);
++  /* create the query message */
++  Egxp_Message * query = xmpp_message_query (XMPP_VALUE_QUERY_AUTH);
++  /* create the username node */
++  Egxp_Message * username = egxp_message_new (XMPP_TAG_USERNAME);
++  egxp_message_append_data (username, x-&gt;jid-&gt;user, strlen (x-&gt;jid-&gt;user));
++  
++  /* compose */
++  egxp_message_add_child (iq, query);
++  egxp_message_add_child (query, username);
++
++  /* now send it */
++  Egxp_Connection * conn = EGXP_EXTENSION(x)-&gt;parent-&gt;connection;
++  egxp_connection_send_message (conn, iq, 1);
++}
+
+Added: src/xmpp/xmpp_auth.h
+===================================================================
+--- src/xmpp/xmpp_auth.h	2005-02-13 16:40:57 UTC (rev 12)
++++ src/xmpp/xmpp_auth.h	2005-02-15 21:37:32 UTC (rev 13)
+@@ -0,0 +1,43 @@
++#ifndef xmpp_auth_header_h_
++#define xmpp_auth_header_h_
++
++struct _Xmpp;
++
++/**
++ * This structure and set of functions should 
++ * manage the authentification step of the jabber protocol.
++ */
++typedef struct _Xmpp_Auth Xmpp_Auth;
++#define XMPP_AUTH(o) ((Xmpp_Auth*)o)
++struct _Xmpp_Auth {
++  
++  /* store the password */
++  char * password;
++
++  /* store the stream id */
++  char * stream_id;
++};
++
++
++/**
++ * Initialize the structure
++ */
++Xmpp_Auth * xmpp_auth_new ();
++
++
++/**
++ * Free the authentification structure
++ * - free the password
++ * - free the stream id
++ */
++void xmpp_auth_free (Xmpp_Auth * a);
++
++
++
++/**
++ * Send a message to try to be authenticiate in
++ * no SASL mode
++ */
++void xmpp_auth_msg_no_sasl (struct _Xmpp * x);
++
++#endif
+
+Modified: src/xmpp/xmpp_callback.c
+===================================================================
+--- src/xmpp/xmpp_callback.c	2005-02-13 16:40:57 UTC (rev 12)
++++ src/xmpp/xmpp_callback.c	2005-02-15 21:37:32 UTC (rev 13)
+@@ -20,6 +20,8 @@
+ */
+ #include &lt;assert.h&gt;
+ 
++#include &quot;egxp/egxp.h&quot;
++#include &quot;xmpp.h&quot;
+ #include &quot;xmpp_callback.h&quot;
+ 
+ 
+@@ -29,5 +31,19 @@
+ #endif 
+   assert (msg &amp;&amp; eg);
+   
++  /* get the xmpp protocol */
++  Xmpp * xm = XMPP( egxp_extension_get_from_string (EGXP(eg), XMPP_REGISTER));
++  assert (xm);
++
++  /* technically we should control childs of stream tag. But for
++     now we just try to authenticate our client NO-SASL */
+   
++  /* check if there is a authentification object */
++  if (xm-&gt;auth == NULL) xm-&gt;auth = xmpp_auth_new ();
++
++  /* try to set the stream id */
++  xm-&gt;auth-&gt;stream_id = egxp_message_get_attribute (msg, XMPP_ATT_ID);
++  
++  /* now we can try to send the first message to be authenticied */
++  xmpp_auth_msg_no_sasl (xm);
+ }
+
+Modified: src/xmpp/xmpp_callback.h
+===================================================================
+--- src/xmpp/xmpp_callback.h	2005-02-13 16:40:57 UTC (rev 12)
++++ src/xmpp/xmpp_callback.h	2005-02-15 21:37:32 UTC (rev 13)
+@@ -25,7 +25,9 @@
+ 
+ 
+ /**
+- * Stream begin callback
++ * Stream begin callback.
++ *  - try to get the stream id.
++ *  - send a message to authenticiate.
+  */
+ void xmpp_callback_stream_begin_cb (Egxp_Message * msg, void * eg);
+ 
+
+Modified: src/xmpp/xmpp_message.c
+===================================================================
+--- src/xmpp/xmpp_message.c	2005-02-13 16:40:57 UTC (rev 12)
++++ src/xmpp/xmpp_message.c	2005-02-15 21:37:32 UTC (rev 13)
+@@ -34,7 +34,7 @@
+ #endif
+   
+   assert (x);
+-
++  
+   /**
+    * Make the stream message
+    */
+@@ -52,14 +52,38 @@
+ 			      egxp_message_attribute_new (XMPP_ATT_TO, 
+ 							  x-&gt;jid-&gt;host));
+   
+-  /* to xml */
+-  char * buf = egxp_message_to_xml (message, 0);
+-  
+-  /* free message */
+-  egxp_message_free (message);
++  /* send message */
++  /* get reference to the connection */
++  Egxp_Connection * conn = EGXP_EXTENSION(x)-&gt;parent-&gt;connection;
++  egxp_connection_send_message (conn, message, 0);
++}
+ 
+-  // to be continued ...
++Egxp_Message * xmpp_message_iq (char * type, char * id, char * to) {
++#ifdef XMPP_DEBUG
++  printf(&quot;TRACE: xmpp_message_iq\n&quot;);
++#endif
++  assert (type &amp;&amp; id);
+   
+-  /* free buffer */
+-  FREE(buf);
++  /* create the iq */
++  Egxp_Message * msg = egxp_message_new (XMPP_TAG_IQ);
++  egxp_message_add_attribute (msg, egxp_message_attribute_new (XMPP_ATT_TYPE,
++							       type));
++  /* id */
++  egxp_message_add_attribute (msg, egxp_message_attribute_new (XMPP_ATT_ID,
++							       id));
++  /* to */
++  if (to) 
++    egxp_message_add_attribute (msg, egxp_message_attribute_new (XMPP_ATT_TO,
++								 to));
++  
++  return msg;
+ }
++
++
++Egxp_Message * xmpp_message_query (char * xmlns) {
++  Egxp_Message * message = egxp_message_new (XMPP_TAG_QUERY);
++  egxp_message_add_attribute (message, 
++			      egxp_message_attribute_new (XMPP_ATT_XMLNS, 
++							  xmlns));
++  return message;
++}
+
+Modified: src/xmpp/xmpp_message.h
+===================================================================
+--- src/xmpp/xmpp_message.h	2005-02-13 16:40:57 UTC (rev 12)
++++ src/xmpp/xmpp_message.h	2005-02-15 21:37:32 UTC (rev 13)
+@@ -21,6 +21,7 @@
+ #ifndef xmpp_message_header_h_
+ #define xmpp_message_header_h_
+ 
++#include &quot;egxp/egxp_message.h&quot;
+ #include &quot;xmpp_struct.h&quot;
+ 
+ /**
+@@ -30,4 +31,23 @@
+ int xmpp_message_stream (Xmpp * x);
+ 
+ 
++/**
++ * This function is an helper function to 
++ * build preconfigured iq message.
++ * @param type: &quot;set&quot; or &quot;get&quot; must not be null
++ * @param id: &quot;id of the query&quot; must not be null
++ * @param to: &quot;the destination&quot;
++ * @return the build message
++ */
++Egxp_Message * xmpp_message_iq (char * type, char * id, char * to);
++
++
++/**
++ * This function is a helper function to build a preconfigured
++ * query message.
++ * @param xmlns: The xmlns value
++ * @return the query build message
++ */
++Egxp_Message * xmpp_message_query (char * xmlns);
++
+ #endif
+
+Modified: src/xmpp/xmpp_opcode.h
+===================================================================
+--- src/xmpp/xmpp_opcode.h	2005-02-13 16:40:57 UTC (rev 12)
++++ src/xmpp/xmpp_opcode.h	2005-02-15 21:37:32 UTC (rev 13)
+@@ -27,7 +27,11 @@
+  * Here we define the xmpp opcodes
+  */
+ #define XMPP_TAG_STREAM &quot;stream:stream&quot;
++#define XMPP_TAG_IQ     &quot;iq&quot;
++#define XMPP_TAG_QUERY  &quot;query&quot;
+ 
++#define XMPP_TAG_USERNAME       &quot;username&quot;
++
+ #define XMPP_ATT_XMLNS          &quot;xmlns&quot;
+ #define XMPP_ATT_XMLNS_STREAM   &quot;xmlns:stream&quot;
+ 
+@@ -46,9 +50,11 @@
+ #define XMPP_ATT_FROM           &quot;from&quot;
+ #define XMPP_ATT_NAME           &quot;name&quot;
+ 
++#define XMPP_VALUE_IQ_GET       &quot;get&quot;
++#define XMPP_VALUE_IQ_SET       &quot;set&quot;
+ 
++#define XMPP_VALUE_QUERY_AUTH   &quot;jabber:iq:auth&quot;
+ 
+-
+ /**
+  * Add the xmpp opcode inside the opcode variable
+  * @param opcode: use to store xmpp opcode
+
+Modified: src/xmpp/xmpp_struct.h
+===================================================================
+--- src/xmpp/xmpp_struct.h	2005-02-13 16:40:57 UTC (rev 12)
++++ src/xmpp/xmpp_struct.h	2005-02-15 21:37:32 UTC (rev 13)
+@@ -26,6 +26,7 @@
+ #include &quot;egxp/egxp.h&quot;
+ 
+ #include &quot;xmpp_jid.h&quot;
++#include &quot;xmpp_auth.h&quot;
+ 
+ typedef struct _Xmpp Xmpp;
+ #define XMPP(o) ((Xmpp*)o)
+@@ -35,6 +36,9 @@
+   
+   /* the jid */
+   Xmpp_JID * jid;
++
++  /* the authentification structure */
++  Xmpp_Auth * auth;
+ };
+ 
+ #endif
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000008.html">[Eim-svn] r12 - / src/egxp src/xmpp
+</A></li>
+	<LI>Next message: <A HREF="000010.html">[Eim-svn] r14 - / doc src src/egxp src/xmpp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9">[ date ]</a>
+              <a href="thread.html#9">[ thread ]</a>
+              <a href="subject.html#9">[ subject ]</a>
+              <a href="author.html#9">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>

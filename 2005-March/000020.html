@@ -1,0 +1,493 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Eim-svn] r24 - / src src/gui
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/eim-svn/2005-March/index.html" >
+   <LINK REL="made" HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r24%20-%20/%20src%20src/gui&In-Reply-To=%3C200503032102.j23L2MZt031283%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000019.html">
+   <LINK REL="Next"  HREF="000021.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Eim-svn] r24 - / src src/gui</H1>
+    <B>Jo&#235;l Vennin at BerliOS</B> 
+    <A HREF="mailto:eim-svn%40lists.berlios.de?Subject=Re%3A%20%5BEim-svn%5D%20r24%20-%20/%20src%20src/gui&In-Reply-To=%3C200503032102.j23L2MZt031283%40sheep.berlios.de%3E"
+       TITLE="[Eim-svn] r24 - / src src/gui">jol at sheep.berlios.de
+       </A><BR>
+    <I>Thu Mar  3 22:02:22 CET 2005</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000019.html">[Eim-svn] r23 - / src/xmpp src/xmpp-im
+</A></li>
+        <LI>Next message: <A HREF="000021.html">[Eim-svn] r25 - / src src/gui src/xmpp src/xmpp-im
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#20">[ date ]</a>
+              <a href="thread.html#20">[ thread ]</a>
+              <a href="subject.html#20">[ subject ]</a>
+              <a href="author.html#20">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jol
+Date: 2005-03-03 22:02:19 +0100 (Thu, 03 Mar 2005)
+New Revision: 24
+
+Added:
+   src/eim.c
+   src/gui/
+   src/gui/Makefile.am
+   src/gui/gui_main.c
+   src/gui/gui_main.h
+Modified:
+   ChangeLog
+   configure.ac
+   src/Makefile.am
+Log:
+- Add a begin to the interface (only a transparent background with its container).
+- Its just a first look at the evas and esmart api.
+- Update configure.ac to check for evas, esmart abd edje.
+
+
+Modified: ChangeLog
+===================================================================
+--- ChangeLog	2005-03-03 00:48:31 UTC (rev 23)
++++ ChangeLog	2005-03-03 21:02:19 UTC (rev 24)
+@@ -1,4 +1,7 @@
+ 2005-03-03(jol):
++	- Add a begin to the interface (only a transparent background with its container).
++	- Its just a first look at the evas and esmart api.
++	- Update configure.ac to check for evas, esmart abd edje.
+ 	- Fix a problem inside the xmpp_im_contact_remove_all_group.
+ 	- Add xmpp_jid_get_bar and xmpp_jid_get_full.
+ 	- Add GPL license within some files.
+
+Modified: configure.ac
+===================================================================
+--- configure.ac	2005-03-03 00:48:31 UTC (rev 23)
++++ configure.ac	2005-03-03 21:02:19 UTC (rev 24)
+@@ -5,10 +5,10 @@
+ AC_CANONICAL_BUILD
+ AC_CANONICAL_HOST
+ AC_CANONICAL_TARGET
+-AC_ISC_POSIX
+ AM_INIT_AUTOMAKE(eim, 0.0.1)
+-AM_CONFIG_HEADER(config.h)
++AM_CONFIG_HEADER(src/config.h)
+ 
++AC_ISC_POSIX
+ AC_PROG_CC
+ AM_PROG_CC_STDC
+ AC_HEADER_STDC
+@@ -18,7 +18,24 @@
+ AC_FUNC_ALLOCA
+ 
+ 
++dnl AC_EXPAND_DIR(PACKAGE_DATA_DIR, &quot;$datadir/${PACKAGE}&quot;)
++dnl AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, &quot;$PACKAGE_DATA_DIR&quot;)
+ 
++dnl if test &quot;x${prefix}&quot; = &quot;xNONE&quot;; then
++dnl 	AC_DEFINE_UNQUOTED(PREFIX, &quot;/usr/local/&quot;)
++dnl else
++dnl 	AC_DEFINE_UNQUOTED(PREFIX, &quot;${prefix}&quot;)
++dnl fi
++
++dnl AC_EXPAND_DIR(PACKAGE_CFG_DIR, &quot;$sysconfdir&quot;)
++dnl AC_DEFINE_UNQUOTED(PACKAGE_CFG_DIR, &quot;$PACKAGE_CFG_DIR&quot;)
++
++dnl Set PACKAGE_SOURCE_DIR in config.h.
++dnl packagesrcdir=`cd $srcdir &amp;&amp; pwd`
++dnl AC_DEFINE_UNQUOTED(PACKAGE_SOURCE_DIR, &quot;${packagesrcdir}&quot;)
++
++
++
+ # PKG_CHECK_MODULES(IDN, libidn &gt;= 0.4.1)
+ 
+ 
+@@ -36,8 +53,37 @@
+ AC_SUBST(ecore_libs)
+ AC_SUBST(ecore_cflags)
+ 
++dnl Check for edje
++AC_PATH_GENERIC(edje, 0.5.0, [
++  AC_SUBST(edje_libs)
++	AC_SUBST(edje_cflags) ],
++	AC_MSG_ERROR(Cannot find edje: Is edje-config in path?))
++edje_libs=`edje-config --libs`
++edje_cflags=`edje-config --cflags`
++AC_SUBST(edje_libs)
++AC_SUBST(edje_cflags)
+ 
++dnl Check for esmart
++AC_PATH_GENERIC(esmart, 0.9.0, [
++  AC_SUBST(esmart_libs)
++	AC_SUBST(esmart_cflags) ],
++	AC_MSG_ERROR(Cannot find esmart: Is esmart-config in path?))
++esmart_libs=`esmart-config --libs`
++esmart_cflags=`esmart-config --cflags`
++AC_SUBST(esmart_libs)
++AC_SUBST(esmart_cflags)
+ 
++
++dnl Check for evas
++AC_PATH_GENERIC(evas, 0.9.0, [
++  AC_SUBST(evas_libs)
++	AC_SUBST(evas_cflags) ],
++	AC_MSG_ERROR(Cannot find evas: Is evas-config in path?))
++evas_libs=`evas-config --libs`
++evas_cflags=`evas-config --cflags`
++AC_SUBST(evas_libs)
++AC_SUBST(evas_cflags)
++
+ dnl Check for expat
+ EXPAT_INCLUDE=&quot;&quot;
+ EXPAT_LIB=&quot;-lexpat&quot;
+@@ -77,5 +123,6 @@
+ src/egxp/Makefile
+ src/xmpp/Makefile
+ src/xmpp-im/Makefile
++src/gui/Makefile
+ doc/Makefile
+ ])
+
+Modified: src/Makefile.am
+===================================================================
+--- src/Makefile.am	2005-03-03 00:48:31 UTC (rev 23)
++++ src/Makefile.am	2005-03-03 21:02:19 UTC (rev 24)
+@@ -1,6 +1,22 @@
+ SUBDIRS= \
+ 	egxp    \
+ 	xmpp	\
+-	xmpp-im
++	xmpp-im \
++	gui
+ 
+ 
++bin_PROGRAMS = eim
++
++eim_SOURCES = \
++	eim.c
++
++eim_CFLAGS = \
++	$(ecore_cflags) $(IDN_CFLAGS) \
++	-I$(top_srcdir)/src
++
++eim_LDADD = \
++	-Legxp/ -legxp        \
++	-Lxmpp/ -lxmpp        \
++	-Lxmpp-im/ -lxmppim   \
++	-Lgui/ -lgui
++
+
+Added: src/eim.c
+===================================================================
+--- src/eim.c	2005-03-03 00:48:31 UTC (rev 23)
++++ src/eim.c	2005-03-03 21:02:19 UTC (rev 24)
+@@ -0,0 +1,64 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++#include &lt;stdio.h&gt;
++#include &lt;Ecore.h&gt;
++#include &lt;Ecore_Con.h&gt;
++
++#include &quot;gui/gui_main.h&quot;
++
++
++static int eim_handler_signal_exit (void *data, int ev_type, void *ev) {
++  Ecore_Event_Signal_Exit *e = ev;
++  
++  /*  
++  if (e-&gt;interrupt)
++    printf (&quot;%s exit: interrupt\n&quot;, PACKAGE);
++  if (e-&gt;quit)
++    printf (&quot;%s exit: quit\n&quot;, PACKAGE);
++  if (e-&gt;terminate)
++    printf (&quot;%s exit: terminate\n&quot;, PACKAGE);
++  */
++  ecore_main_loop_quit ();
++
++  return 1;
++}
++
++
++int main (int argc, char **argv) {
++  
++  /* initialize the core */
++  ecore_init ();
++  ecore_event_handler_add (ECORE_EVENT_SIGNAL_EXIT, eim_handler_signal_exit, NULL);
++  if (!ecore_con_init ()) return -1;
++  
++  ecore_app_args_set (argc, (const char **) argv);
++
++  if (gui_main_init (&quot;eim&quot;)) return -1;
++  
++  /* process the main loop */
++  ecore_main_loop_begin ();
++
++
++  /* shutdown all ecore service */
++  ecore_shutdown ();
++  
++  return 0;
++}
+
+Added: src/gui/Makefile.am
+===================================================================
+--- src/gui/Makefile.am	2005-03-03 00:48:31 UTC (rev 23)
++++ src/gui/Makefile.am	2005-03-03 21:02:19 UTC (rev 24)
+@@ -0,0 +1,22 @@
++noinst_LTLIBRARIES = libgui.la
++
++pkgincludeinputdir = $(pkgincludedir)/gui
++pkgincludeinput_HEADERS= \
++	gui_main.h
++
++libgui_la_SOURCES = \
++	gui_main.c
++
++libgui_la_CFLAGS = \
++	-I$(top_srcdir)/src                 \
++	$(ecore_cflags)                     \
++	$(evas_cflags)                      \
++	$(esmart_cflags)                    \
++	$(IDN_CFLAGS) $(EXPAT_INCLUDE) 
++
++libgui_la_LIBADD = \
++	$(ecore_libs)                         \
++	$(evas_libs)                          \
++	$(esmart_libs)  -lesmart_trans_x11 -lesmart_container   \
++	$(IDN_LIBS)                           \
++	$(EXPAT_LIB)
+
+Added: src/gui/gui_main.c
+===================================================================
+--- src/gui/gui_main.c	2005-03-03 00:48:31 UTC (rev 23)
++++ src/gui/gui_main.c	2005-03-03 21:02:19 UTC (rev 24)
+@@ -0,0 +1,141 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++#include &lt;assert.h&gt;
++#include &lt;stdlib.h&gt;
++#include &lt;stdio.h&gt;
++
++#include &lt;Ecore_X.h&gt;
++#include &lt;Esmart/Esmart_Container.h&gt;
++#include &lt;Ecore_Evas.h&gt;
++
++#include &quot;gui_main.h&quot;
++
++
++static void _freshen_trans(Ecore_Evas *ee) {
++    int x, y, w, h;
++    Evas_Object *o;
++
++    if (!ee) return;
++
++    /* get the size of the object */
++    ecore_evas_geometry_get(ee, &amp;x, &amp;y, &amp;w, &amp;h);
++    o = evas_object_name_find(ecore_evas_get(ee), &quot;background&quot;);
++
++    /* be sure that the object exist */
++    if (!o) {
++        fprintf(stderr, &quot;Trans object not found, bad, very bad\n&quot;);
++        ecore_main_loop_quit();
++    }
++    /* make the refresh */
++    esmart_trans_x11_freshen(o, x, y, w, h);
++}
++
++
++void gui_main_move_cb(Ecore_Evas *ee) {
++  /* refresh the transparent during moving */
++  _freshen_trans(ee);
++}
++
++
++void gui_main_resize_cb(Ecore_Evas *ee) {
++    int w, h;
++    int minw, minh;
++    int maxw, maxh;
++    Evas_Object *o = NULL;
++
++    if (ee) {
++      /* get size */
++      ecore_evas_geometry_get(ee, NULL, NULL, &amp;w, &amp;h);
++      ecore_evas_size_min_get(ee, &amp;minw, &amp;minh);
++      ecore_evas_size_max_get(ee, &amp;maxw, &amp;maxh);
++
++      if ((w &gt;= minw) &amp;&amp; (h &gt;= minh) &amp;&amp; (h &lt;= maxh) &amp;&amp; (w &lt;= maxw)) {
++	if ((o = evas_object_name_find(ecore_evas_get(ee), &quot;background&quot;)))
++	  evas_object_resize(o, w, h);
++      }
++    }
++    /* call the refresh stuff */
++    _freshen_trans(ee);
++}
++
++
++int gui_main_init (char * winname) {
++
++  /* the X Window object */
++  Ecore_X_Window  win;
++  int x, y , w, h;
++
++  /* initialize x */
++  ecore_x_init (NULL);
++  if (!ecore_evas_init ()) return -1;
++  
++  Ecore_Evas  *ee = ecore_evas_software_x11_new (NULL, 0, 0, 0, 150, 150);
++  win = ecore_evas_software_x11_window_get(ee);
++  
++  /* if the ee is not available */
++  if (!ee) return -1;
++
++  /* define some properties on the ecore evas object */
++  /* set title name */
++  ecore_evas_title_set (ee, winname);
++  /* remove border */
++  //  ecore_evas_borderless_set (ee, 1);
++  /* define the window on the below level layer */
++  ecore_x_window_prop_layer_set(win, ECORE_X_WINDOW_LAYER_BELOW);
++  /* define callback */
++  ecore_evas_callback_resize_set(ee, gui_main_resize_cb);
++  ecore_evas_callback_move_set(ee, gui_main_move_cb);
++
++  /* display the window */
++  ecore_evas_show (ee);
++  
++  /* get the Evas object from the ecore evas */
++  Evas * evas= ecore_evas_get (ee);
++  
++  /* create a transparent background */
++  Evas_Object * background = esmart_trans_x11_new (evas);
++  evas_object_move (background, 0, 0);
++  evas_object_layer_set(background, -5);
++  evas_object_name_set(background, &quot;background&quot;);
++  ecore_evas_geometry_get(ee, &amp;x, &amp;y, &amp;w, &amp;h);
++  evas_object_resize(background, w, h);
++  evas_object_show(background);
++
++  /* refresh the background */
++  esmart_trans_x11_freshen(background, x, y, w, h);
++  
++  
++  /* create the container */
++  Evas_Object * container = esmart_container_new(evas);
++  evas_object_move(container, 0, 0);
++  evas_object_resize(container, w, h);
++  evas_object_layer_set(container, 0);
++  evas_object_name_set(container, &quot;container&quot;);
++  evas_object_show(container);
++  esmart_container_padding_set(container, 10, 10, 10, 10);
++  esmart_container_spacing_set(container, 5);
++  esmart_container_direction_set(container, 1);
++  esmart_container_fill_policy_set(container,
++				   CONTAINER_FILL_POLICY_FILL);
++  
++
++  return 0;
++}
+
+Added: src/gui/gui_main.h
+===================================================================
+--- src/gui/gui_main.h	2005-03-03 00:48:31 UTC (rev 23)
++++ src/gui/gui_main.h	2005-03-03 21:02:19 UTC (rev 24)
+@@ -0,0 +1,31 @@
++/*
++   $Id$
++
++   Copyright (C) 2005 Jo&#235;l Vennin &lt; joel.vennin <A HREF="https://lists.berlios.de/mailman/listinfo/eim-svn">_ at _</A> gmail _dot_ com &gt;
++   Part of the Eim Project <A HREF="http://eim.berlios.de">http://eim.berlios.de</A>
++
++   Eim is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   Eim is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with Eim; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++
++#ifndef gui_main_header
++#define gui_main_header
++
++/**
++ * Initialize the GUI
++ * @return 0 on success
++ */
++int gui_main_init (char * winname);
++
++#endif
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000019.html">[Eim-svn] r23 - / src/xmpp src/xmpp-im
+</A></li>
+	<LI>Next message: <A HREF="000021.html">[Eim-svn] r25 - / src src/gui src/xmpp src/xmpp-im
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#20">[ date ]</a>
+              <a href="thread.html#20">[ thread ]</a>
+              <a href="subject.html#20">[ subject ]</a>
+              <a href="author.html#20">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/eim-svn">More information about the Eim-svn
+mailing list</a><br>
+</body></html>
